@@ -127,8 +127,8 @@ dialog#padDlg::backdrop{background:rgba(15,23,35,.6)}
 .pad-btns .l{margin-right:auto}
 
 input.tm{cursor:pointer;background:#fff}
-dialog#timeDlg{border:0;border-radius:14px;padding:0;width:min(360px,92vw)}
-dialog#timeDlg::backdrop{background:rgba(15,23,35,.6)}
+dialog#timeDlg,dialog#catDlg{border:0;border-radius:14px;padding:0;width:min(360px,92vw)}
+dialog#timeDlg::backdrop,dialog#catDlg::backdrop{background:rgba(15,23,35,.6)}
 .tm-sel{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-size:16px}
 .tm-sel select{flex:1;font-size:20px;padding:10px;text-align:center}
 
@@ -220,7 +220,7 @@ dialog#timeDlg::backdrop{background:rgba(15,23,35,.6)}
           <h3>기본 정보</h3>
           <label class="f">교육명 *<input data-f="title" placeholder="예) 11월 정기 안전보건교육"></label>
           <div class="row2">
-            <label class="f">교육구분<input data-f="category" list="catList" placeholder="선택 또는 입력"></label>
+            <label class="f">교육구분<select data-f="category" id="catSel"></select></label>
             <label class="f">교육일자<input type="date" data-f="date"></label>
           </div>
           <div class="row2">
@@ -228,13 +228,10 @@ dialog#timeDlg::backdrop{background:rgba(15,23,35,.6)}
             <label class="f">종료 시간<input class="tm" data-f="end" readonly placeholder="--:--" inputmode="none"></label>
           </div>
           <div class="row2">
-            <label class="f">교육장소<input data-f="place" placeholder="예) 2층 회의실"></label>
             <label class="f">교육자<input data-f="instructor" placeholder="교육자명"></label>
+            <label class="f">주관부서<select data-f="dept" id="deptSel"></select></label>
           </div>
-          <datalist id="catList">
-            <option>정기교육</option><option>신규채용자교육</option><option>작업내용변경교육</option>
-            <option>특별안전교육</option><option>품질교육</option><option>직무교육</option><option>OJT</option>
-          </datalist>
+          <label class="f">교육장소<input data-f="place" placeholder="예) 2층 회의실"></label>
         </div>
 
         <div class="card">
@@ -332,6 +329,14 @@ dialog#timeDlg::backdrop{background:rgba(15,23,35,.6)}
           <button id="saveBasic" class="primary">설정 저장</button>
         </div>
         <div class="card">
+          <h3>교육 유형 <small id="catCnt"></small></h3>
+          <div class="row3" style="grid-template-columns:1fr auto">
+            <input id="newCat" placeholder="교육 유형 입력 후 추가">
+            <button id="addCat" class="primary">추가</button>
+          </div>
+          <div id="catChips" class="chips"></div>
+        </div>
+        <div class="card">
           <h3>부서 <small id="deptCnt"></small></h3>
           <div class="row3" style="grid-template-columns:1fr auto">
             <input id="newDept" placeholder="부서명 입력 후 추가">
@@ -369,6 +374,17 @@ dialog#timeDlg::backdrop{background:rgba(15,23,35,.6)}
       <button id="padSkip">건너뛰기</button>
       <button id="padCancel">닫기</button>
       <button id="padOk" class="primary">서명 완료</button>
+    </div>
+  </div>
+</dialog>
+<dialog id="catDlg">
+  <div class="pad-wrap">
+    <div class="pad-title">교육 유형 추가</div>
+    <div class="pad-sub">목록에 새 교육 유형을 추가합니다.</div>
+    <input id="catNew" placeholder="예) 소방훈련">
+    <div class="pad-btns">
+      <button id="catCancel">취소</button>
+      <button id="catOk" class="primary">추가</button>
     </div>
   </div>
 </dialog>
@@ -427,12 +443,13 @@ const kvGet = async (k, def) => { const r = await DB.get('kv', k); return r ? r.
 const kvSet = (k, v) => DB.put('kv', {key:k, value:v});
 
 /* ---------------- state ---------------- */
-let S = { company:'', roles:['작성','검토','승인'], depts:[], people:[] };
+const DEFAULT_CATS = ['정기교육','신규채용자교육','작업내용변경교육','특별안전교육','품질교육','직무교육','OJT'];
+let S = { company:'', roles:['작성','검토','승인'], depts:[], people:[], cats:DEFAULT_CATS.slice() };
 let doc = null;
 let dirty = false;
 
 function newDoc(){
-  return { id:null, title:'', category:'정기교육', date:today(), start:'', end:'', place:'', instructor:'', content:'',
+  return { id:null, title:'', category:'정기교육', date:today(), start:'', end:'', place:'', instructor:'', dept:'', content:'',
     fillBlank:true, photos:[], attendees:[], approvals:S.roles.map(r => ({role:r, name:'', sign:''})), createdAt:null, updatedAt:null };
 }
 const saveSettings = () => kvSet('settings', S);
@@ -451,16 +468,54 @@ function showTab(name){
   $$('.tab').forEach(t => t.classList.toggle('on', t.id === 'tab-' + name));
   if (name === 'list') renderList();
   if (name === 'setup') renderSetup();
-  if (name === 'edit') { renderPick(); renderPreview(); autoGrow(); }
+  if (name === 'edit') { renderPick(); renderCats(); renderDeptSel(); renderPreview(); autoGrow(); }
   window.scrollTo(0, 0);
 }
 
 /* ---------------- form ---------------- */
 $$('[data-f]').forEach(el => el.addEventListener('input', () => {
+  if (el.value === '__add__') return;   // '새 교육 유형 추가' 선택은 값으로 저장하지 않음
   doc[el.dataset.f] = el.type === 'checkbox' ? el.checked : el.value;
   touch();
 }));
+/* 교육구분 목록 (맨 아래 '새 교육 유형 추가') */
+const CAT_ADD = '__add__';
+function renderCats(){
+  const sel = $('#catSel'), cur = doc ? doc.category : '';
+  const list = S.cats.slice();
+  if (cur && !list.includes(cur)) list.push(cur);   // 예전에 직접 입력한 값 유지
+  sel.innerHTML = `<option value="">선택하세요</option>` + list.map(c => `<option>${esc(c)}</option>`).join('')
+    + `<option value="${CAT_ADD}">＋ 새 교육 유형 추가…</option>`;
+  sel.value = cur || '';
+}
+$('#catSel').addEventListener('change', e => {
+  if (e.target.value !== CAT_ADD) return;
+  e.target.value = doc.category || '';
+  $('#catNew').value = ''; $('#catDlg').showModal(); $('#catNew').focus();
+});
+async function addCatFromDlg(){
+  const v = $('#catNew').value.trim();
+  if (!v) return toast('교육 유형을 입력하세요');
+  if (!S.cats.includes(v)){ S.cats.push(v); await saveSettings(); }
+  $('#catDlg').close();
+  doc.category = v; renderCats(); touch(); toast(`"${v}" 추가됨`);
+}
+$('#catOk').onclick = addCatFromDlg;
+$('#catCancel').onclick = () => $('#catDlg').close();
+$('#catNew').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); addCatFromDlg(); } });
+
+/* 주관부서: [인원·설정]에 등록한 부서 목록에서 선택 */
+function renderDeptSel(){
+  const sel = $('#deptSel'), cur = doc ? (doc.dept || '') : '';
+  const list = S.depts.slice();
+  if (cur && !list.includes(cur)) list.push(cur);   // 삭제된 부서라도 기존 일지 값 유지
+  sel.innerHTML = `<option value="">${S.depts.length ? '선택하세요' : '부서 없음 ([인원·설정]에서 등록)'}</option>`
+    + list.map(d => `<option>${esc(d)}</option>`).join('');
+  sel.value = cur;
+}
+
 function fillForm(){
+  renderCats(); renderDeptSel();
   $$('[data-f]').forEach(el => {
     const v = doc[el.dataset.f];
     if (el.type === 'checkbox') el.checked = !!v; else el.value = v ?? '';
@@ -789,9 +844,10 @@ function firstPageHTML(){
     <table class="p-info">
       <colgroup><col style="width:24mm"><col><col style="width:24mm"><col></colgroup>
       <tr><th>교 육 명</th><td colspan="3"><b>${esc(doc.title)}</b></td></tr>
-      <tr><th>교육구분</th><td>${esc(doc.category)}</td><th>교 육 자</th><td>${esc(doc.instructor)}</td></tr>
+      <tr><th>교육구분</th><td>${esc(doc.category)}</td><th>교육인원</th><td>총 ${n}명${n ? ` (서명 ${s}명)` : ''}</td></tr>
+      <tr><th>교 육 자</th><td>${esc(doc.instructor)}</td><th>주관부서</th><td>${esc(doc.dept)}</td></tr>
       <tr><th>교육일시</th><td colspan="3">${esc(fmtDate())}</td></tr>
-      <tr><th>교육장소</th><td>${esc(doc.place)}</td><th>교육인원</th><td>총 ${n}명${n ? ` (서명 ${s}명)` : ''}</td></tr>
+      <tr><th>교육장소</th><td colspan="3">${esc(doc.place)}</td></tr>
     </table>
     <div class="p-sec">교육 내용</div>
     <div class="p-content">${esc((doc.content || '').replace(/\s+$/, ''))}</div>
@@ -967,12 +1023,12 @@ async function renderList(){
   let logs = await DB.all('logs');
   logs.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.updatedAt || 0) - (a.updatedAt || 0));
   if (mon) logs = logs.filter(l => (l.date || '').startsWith(mon));
-  if (q) logs = logs.filter(l => [l.title, l.instructor, l.category, l.place, ...l.attendees.map(a => a.name + ' ' + a.dept)].join(' ').toLowerCase().includes(q));
+  if (q) logs = logs.filter(l => [l.title, l.instructor, l.dept, l.category, l.place, ...l.attendees.map(a => a.name + ' ' + a.dept)].join(' ').toLowerCase().includes(q));
   $('#logList').innerHTML = logs.length ? logs.map(l => {
     const n = l.attendees.length, s = l.attendees.filter(a => a.sign).length;
     return `<div class="log" data-id="${esc(l.id)}">
       <div class="d">${esc(l.date)}</div>
-      <div class="t"><b>${esc(l.title)}</b><span>${esc(l.category)}${l.instructor ? ' · 교육자 ' + esc(l.instructor) : ''} · 참석 ${n}명 (서명 ${s}) · 사진 ${l.photos.length}장</span></div>
+      <div class="t"><b>${esc(l.title)}</b><span>${esc(l.category)}${l.dept ? ' · ' + esc(l.dept) : ''}${l.instructor ? ' · 교육자 ' + esc(l.instructor) : ''} · 참석 ${n}명 (서명 ${s}) · 사진 ${l.photos.length}장</span></div>
       <div class="acts"><button class="sm primary" data-act="open">열기</button><button class="sm" data-act="copy">복제</button><button class="sm danger" data-act="del">삭제</button></div>
     </div>`;
   }).join('') : `<div class="empty-box">${q || mon ? '검색 결과가 없습니다.' : '저장된 교육일지가 없습니다.'}</div>`;
@@ -1021,6 +1077,7 @@ $('#importInput').onchange = async e => {
     const st = data.settings || {};
     if (st.company && !S.company) S.company = st.company;
     (st.depts || []).forEach(d => { if (!S.depts.includes(d)) S.depts.push(d); });
+    (st.cats || []).forEach(c => { if (!S.cats.includes(c)) S.cats.push(c); });
     (st.people || []).forEach(p => { if (!S.people.some(x => sameP(x, p))) S.people.push({id:p.id || uid(), dept:p.dept, name:p.name}); });
     await saveSettings(); renderList(); renderPick(); toast('복원 완료');
   } catch(err){ alert('복원 실패: ' + err.message); }
@@ -1029,6 +1086,10 @@ $('#importInput').onchange = async e => {
 /* ---------------- setup ---------------- */
 function renderSetup(){
   $('#setCompany').value = S.company; $('#setRoles').value = S.roles.join(',');
+  $('#catCnt').textContent = S.cats.length ? `${S.cats.length}개` : '';
+  $('#catChips').innerHTML = S.cats.length ? S.cats.map((c, i) =>
+    `<span class="chip">${esc(c)}<button data-ci="${i}" title="삭제">×</button></span>`).join('')
+    : '<p class="hint">등록된 교육 유형이 없습니다.</p>';
   $('#deptCnt').textContent = S.depts.length ? `${S.depts.length}개` : '';
   $('#personCnt').textContent = S.people.length ? `${S.people.length}명` : '';
   $('#deptChips').innerHTML = S.depts.length ? S.depts.map((d, i) =>
@@ -1061,6 +1122,19 @@ $('#addDept').onclick = async () => {
   $('#newDept').value = ''; await saveSettings(); renderSetup(); $('#newDept').focus();
 };
 $('#newDept').addEventListener('keydown', e => { if (e.key === 'Enter') $('#addDept').click(); });
+$('#addCat').onclick = async () => {
+  const v = $('#newCat').value.trim();
+  if (!v) return toast('교육 유형을 입력하세요');
+  if (S.cats.includes(v)) return toast('이미 있는 교육 유형입니다');
+  S.cats.push(v); $('#newCat').value = ''; await saveSettings(); renderSetup(); renderCats(); $('#newCat').focus();
+};
+$('#newCat').addEventListener('keydown', e => { if (e.key === 'Enter') $('#addCat').click(); });
+$('#catChips').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-ci]'); if (!b) return;
+  const c = S.cats[+b.dataset.ci];
+  if (!confirm(`"${c}" 교육 유형을 목록에서 삭제할까요?\n(이미 작성된 일지에는 영향 없음)`)) return;
+  S.cats.splice(+b.dataset.ci, 1); await saveSettings(); renderSetup(); renderCats();
+});
 $('#deptChips').addEventListener('click', async e => {
   const b = e.target.closest('button[data-i]'); if (!b) return;
   const d = S.depts[+b.dataset.i]; const n = S.people.filter(p => p.dept === d).length;
