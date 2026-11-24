@@ -1,0 +1,1114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f4e79">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="교육일지">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>교육일지</title>
+<style>
+:root{
+  --pri:#1f4e79; --pri-d:#163a5b; --bg:#eef1f5; --card:#fff; --line:#d6dbe3;
+  --txt:#1d2430; --sub:#667085; --ok:#178a4c; --danger:#c0392b;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--txt);font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;font-size:15px;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+textarea{resize:vertical;line-height:1.5}
+#contentTa{min-height:110px;overflow:hidden;resize:none}
+input:focus,select:focus,textarea:focus{outline:2px solid #9cc0e4;border-color:var(--pri)}
+button,.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:9px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;white-space:nowrap;user-select:none}
+button:hover,.btn:hover{background:#f4f6f9}
+button.primary,.btn.primary{background:var(--pri);border-color:var(--pri);color:#fff}
+button.primary:hover{background:var(--pri-d)}
+button.danger{color:var(--danger)}
+button.sm{padding:5px 9px;font-size:13px}
+button:disabled{opacity:.5;cursor:default}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:20;background:var(--pri);color:#fff;display:flex;align-items:center;gap:12px;padding:0 16px;height:52px;padding-top:env(safe-area-inset-top)}
+.brand{font-weight:700;font-size:17px}
+.tabs{display:flex;gap:4px;margin-left:auto}
+.tabs button{background:transparent;border:0;color:#cfe0f1;padding:8px 12px}
+.tabs button.on{background:rgba(255,255,255,.16);color:#fff;font-weight:700}
+
+main{padding:14px 16px 90px;max-width:1500px;margin:0 auto}
+.tab{display:none}
+.tab.on{display:block}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}
+.card h3 small{color:var(--sub);font-weight:400}
+label.f{display:block;font-size:13px;color:var(--sub);margin-bottom:8px}
+label.f > input,label.f > select,label.f > textarea{margin-top:4px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center}
+.rowx{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hint{color:var(--sub);font-size:12.5px;margin:6px 0 0}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}
+.chk input{width:auto}
+details{margin-top:8px}
+summary{cursor:pointer;color:var(--pri);font-size:14px;padding:4px 0}
+
+/* edit layout */
+.edit-grid{display:grid;grid-template-columns:minmax(340px,460px) 1fr;gap:16px;align-items:start}
+.preview-pane{position:sticky;top:66px;max-height:calc(100vh - 80px);overflow:auto;background:#cfd5de;border-radius:12px;padding:12px}
+.pv-head{display:flex;justify-content:space-between;font-size:13px;color:#3b4656;margin-bottom:8px}
+.pv-warn{color:var(--danger);font-weight:700}
+@media (max-width:900px){
+  .edit-grid{grid-template-columns:1fr}
+  .preview-pane{position:static;max-height:none}
+}
+
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px}
+.thumb{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fafafa}
+.thumb img{width:100%;height:90px;object-fit:cover;display:block}
+.thumb .tb{display:flex;gap:4px;padding:4px}
+.thumb input{padding:4px 6px;font-size:12.5px}
+.thumb button{padding:4px 7px;font-size:12px}
+.btn.off{opacity:.45;cursor:not-allowed}
+
+.picklist{max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin:8px 0;padding:4px 8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.picklist label{display:flex;align-items:center;gap:6px;padding:5px 2px;font-size:14px;cursor:pointer}
+.picklist label input{width:auto}
+.picklist .empty{grid-column:1/-1;color:var(--sub);font-size:13px;padding:8px 0}
+
+.att-list{margin-top:10px;border-top:1px solid var(--line)}
+.att{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #eceff3}
+.att .no{width:24px;color:var(--sub);font-size:12px;text-align:right}
+.att .who{flex:1;min-width:0}
+.att .who b{font-weight:600}
+.att .who span{color:var(--sub);font-size:13px;margin-right:6px}
+.sigbox{width:96px;height:36px;border:1px dashed #aab4c3;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--pri);cursor:pointer;padding:0}
+.sigbox img{max-width:100%;max-height:100%}
+.sigbox.done{border-style:solid;border-color:#9bd3b3;background:#f3fbf6}
+
+.appr-row{display:grid;grid-template-columns:52px 1fr 96px auto;gap:8px;align-items:center;margin-bottom:6px}
+.appr-row b{font-size:14px}
+
+.actionbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));align-items:center;justify-content:flex-end}
+.actionbar .status{margin-right:auto;font-size:13px;color:var(--sub)}
+.actionbar .status.dirty{color:#b36b00}
+.only-mobile{display:none}
+@media (max-width:900px){.only-mobile{display:inline-flex}}
+
+/* list */
+.log{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.log .d{font-size:13px;color:var(--sub);min-width:84px}
+.log .t{flex:1;min-width:0}
+.log .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log .t span{font-size:13px;color:var(--sub)}
+.log .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.empty-box{text-align:center;color:var(--sub);padding:40px 0}
+
+/* setup */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:#eef3f9;border:1px solid #cfdcec;border-radius:999px;padding:4px 6px 4px 12px;font-size:14px}
+.chip button{border:0;background:transparent;padding:0 6px;color:var(--sub);font-size:16px;line-height:1}
+.dept-group{margin-top:12px}
+.dept-group h4{margin:0 0 6px;font-size:14px;color:var(--pri)}
+.setup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;align-items:start}
+
+/* signature dialog */
+dialog#padDlg{border:0;border-radius:14px;padding:0;width:min(720px,96vw);max-width:96vw}
+dialog#padDlg::backdrop{background:rgba(15,23,35,.6)}
+.pad-wrap{padding:14px}
+.pad-title{font-size:18px;font-weight:700}
+.pad-sub{font-size:13px;color:var(--sub);margin:2px 0 10px}
+#padCv{width:100%;height:min(44vh,320px);border:1px solid var(--line);border-radius:10px;touch-action:none;display:block;cursor:crosshair;
+  background:#fff linear-gradient(#fff 0 0) ;background-image:linear-gradient(to bottom,transparent calc(75% - 1px),#d5dbe4 calc(75% - 1px),#d5dbe4 75%,transparent 75%)}
+.pad-btns{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap}
+.pad-btns .l{margin-right:auto}
+
+input.tm{cursor:pointer;background:#fff}
+dialog#timeDlg{border:0;border-radius:14px;padding:0;width:min(360px,92vw)}
+dialog#timeDlg::backdrop{background:rgba(15,23,35,.6)}
+.tm-sel{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-size:16px}
+.tm-sel select{flex:1;font-size:20px;padding:10px;text-align:center}
+
+#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%) translateY(20px);background:#1d2430;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:100}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ===================== A4 PAGE ===================== */
+#pages{--s:1}
+.frame{width:calc(210mm * var(--s));height:calc(297mm * var(--s));overflow:hidden;margin:0 auto 12px;box-shadow:0 2px 10px rgba(0,0,0,.22);background:#fff}
+.page{width:210mm;height:297mm;padding:12mm 12mm 8mm;background:#fff;color:#000;transform:scale(var(--s));transform-origin:0 0;
+  display:flex;flex-direction:column;font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-size:10pt;line-height:1.35;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page .body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:3mm}
+.page .body > *{flex-shrink:0}
+.page .pfoot{height:6mm;padding-top:2mm;text-align:center;font-size:8pt;color:#555}
+.page table{width:100%;border-collapse:collapse;table-layout:fixed}
+.page th,.page td{border:0.3mm solid #000;padding:1mm 1.5mm;vertical-align:middle}
+.page th{background:#eceff3;font-weight:700;text-align:center}
+.p-hd{display:flex;align-items:flex-end;gap:4mm}
+.p-ttl{flex:1;padding-bottom:2mm}
+.p-co{font-size:10pt;color:#333;margin-bottom:1mm}
+.p-ttl h1{margin:0;font-size:24pt;letter-spacing:4mm;font-weight:800}
+.p-ttl.sm h1{font-size:15pt;letter-spacing:0}
+.p-appr{width:auto!important}
+.p-appr th{height:6mm;width:21mm;font-size:9pt;padding:0}
+.p-appr th.v{width:7mm;font-size:9pt;line-height:1.5}
+.p-appr td{height:14mm;width:21mm;padding:0.5mm;text-align:center;vertical-align:middle}
+.p-appr td img{display:block;margin:0 auto;max-width:19mm;max-height:9.5mm}
+.p-appr td .nm{font-size:8.5pt;line-height:1.2}
+.p-appr td .nm:empty{display:none}
+.p-info th{width:24mm;font-size:9.5pt}
+.p-info td{height:8.5mm;font-size:10pt;word-break:keep-all;overflow-wrap:anywhere}
+.p-sec{font-size:11pt;font-weight:700;border-left:1.3mm solid #000;padding-left:2mm;line-height:1.1;margin-top:1mm}
+.p-content{border:0.3mm solid #000;padding:3mm 3.5mm;min-height:12mm;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;line-height:1.6;font-size:10pt}
+.p-photos{display:flex;flex-wrap:nowrap;justify-content:flex-start;align-items:flex-start;gap:2mm}
+.p-photos.wrap{flex-wrap:wrap}
+.p-photos figure{margin:0;border:0.3mm solid #000;break-inside:avoid;position:relative;flex:0 1 auto;min-width:0;max-width:100%}
+.p-photos figure.rzing{outline:0.6mm dashed #1f6fd1;outline-offset:0.4mm}
+.p-photos .rz{position:absolute;right:0;bottom:0;width:calc(26px / var(--s));height:calc(26px / var(--s));cursor:nwse-resize;touch-action:none;
+  background:linear-gradient(135deg,transparent 50%,rgba(31,111,209,.85) 50%);z-index:2}
+.p-photos img{display:block;width:100%;height:auto;object-fit:cover}
+.p-photos figcaption{border-top:0.3mm solid #000;font-size:8.5pt;text-align:center;padding:0.8mm 1mm;min-height:5mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;outline:none;cursor:text}
+.p-photos figcaption:focus{background:#eef5ff;text-overflow:clip}
+.p-photos figcaption:empty::before{content:attr(data-ph);color:#9aa3af}
+@media print{.p-photos figcaption:empty::before{content:none}}
+.p-att th{font-size:9pt;height:7mm;padding:0}
+.p-att td{height:10mm;font-size:9pt;padding:0 1mm;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.p-att .c-no{width:8mm}
+.p-att .c-dp{width:24mm}
+.p-att .c-nm{width:21mm}
+.p-att td.no{font-size:8pt;color:#333}
+.p-att .mid{border-left-width:0.7mm}
+.p-att td.sg{padding:0.5mm}
+.p-att td.sg img{display:block;margin:0 auto;max-height:8.6mm;max-width:100%}
+.p-confirm{font-size:9pt;text-align:right;color:#222}
+
+@media print{
+  @page{size:A4 portrait;margin:0}
+  html,body{background:#fff}
+  .ui,.topbar,.actionbar,#toast,dialog{display:none!important}
+  main{padding:0;max-width:none}
+  .tab{display:none!important}
+  #tab-edit{display:block!important}
+  .edit-grid{display:block}
+  .preview-pane{position:static;max-height:none;overflow:visible;background:none;padding:0;border-radius:0}
+  #pages{--s:1 !important}
+  .frame{width:210mm;height:297mm;margin:0;box-shadow:none;break-after:page;page-break-after:always}
+  .frame:last-child{break-after:auto;page-break-after:auto}
+  .page{transform:none;height:296.6mm;padding-bottom:7.6mm}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">📋 교육일지</div>
+  <nav class="tabs">
+    <button data-tab="edit" class="on">작성</button>
+    <button data-tab="list">목록</button>
+    <button data-tab="setup">인원·설정</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ 작성 ============ -->
+  <section id="tab-edit" class="tab on">
+    <div class="edit-grid">
+      <div class="form ui">
+        <div class="card">
+          <h3>기본 정보</h3>
+          <label class="f">교육명 *<input data-f="title" placeholder="예) 11월 정기 안전보건교육"></label>
+          <div class="row2">
+            <label class="f">교육구분<input data-f="category" list="catList" placeholder="선택 또는 입력"></label>
+            <label class="f">교육일자<input type="date" data-f="date"></label>
+          </div>
+          <div class="row2">
+            <label class="f">시작 시간<input class="tm" data-f="start" readonly placeholder="--:--" inputmode="none"></label>
+            <label class="f">종료 시간<input class="tm" data-f="end" readonly placeholder="--:--" inputmode="none"></label>
+          </div>
+          <div class="row2">
+            <label class="f">교육장소<input data-f="place" placeholder="예) 2층 회의실"></label>
+            <label class="f">교육자<input data-f="instructor" placeholder="교육자명"></label>
+          </div>
+          <datalist id="catList">
+            <option>정기교육</option><option>신규채용자교육</option><option>작업내용변경교육</option>
+            <option>특별안전교육</option><option>품질교육</option><option>직무교육</option><option>OJT</option>
+          </datalist>
+        </div>
+
+        <div class="card">
+          <h3>교육 내용</h3>
+          <textarea data-f="content" id="contentTa" rows="5" placeholder="교육 내용을 입력하세요.&#10;1. ...&#10;2. ..."></textarea>
+        </div>
+
+        <div class="card">
+          <h3>교육 사진 <small id="photoCnt"></small></h3>
+          <div class="rowx">
+            <label class="btn">🖼 사진 선택<input type="file" accept="image/*" multiple id="photoInput" hidden></label>
+            <label class="btn">📷 촬영<input type="file" accept="image/*" capture="environment" id="cameraInput" hidden></label>
+          </div>
+          <div id="photoList" class="thumbs"></div>
+          <p class="hint">사진은 최대 3장까지 등록됩니다. 미리보기에서 사진 오른쪽 아래 모서리(◢)를 마우스나 손가락으로 드래그하면 크기를 조정할 수 있습니다.</p>
+        </div>
+
+        <div class="card">
+          <h3>참석자 <small id="attCnt"></small></h3>
+          <div class="row2">
+            <select id="pickDept"></select>
+            <button id="addDeptAll">부서 전체 추가</button>
+          </div>
+          <div id="pickList" class="picklist"></div>
+          <div class="rowx">
+            <button id="addPicked" class="primary">선택 인원 추가</button>
+            <button id="sortAtt">부서순 정렬</button>
+            <button id="clearAtt" class="danger">전체 삭제</button>
+          </div>
+          <details>
+            <summary>명단에 없는 사람 직접 입력</summary>
+            <div class="row3" style="margin-top:6px">
+              <input id="manDept" list="deptList" placeholder="부서">
+              <input id="manName" placeholder="이름">
+              <button id="manAdd">추가</button>
+            </div>
+          </details>
+          <datalist id="deptList"></datalist>
+          <div id="attList" class="att-list"></div>
+          <div class="rowx" style="margin-top:10px">
+            <button id="signNext" class="primary">✍ 미서명자 순서대로 서명</button>
+            <label class="chk"><input type="checkbox" data-f="fillBlank"> 남는 칸 빈 서명란으로 채우기</label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>결재</h3>
+          <div id="apprList"></div>
+          <p class="hint">결재란 항목은 [인원·설정] 탭에서 변경할 수 있습니다.</p>
+        </div>
+      </div>
+
+      <div class="preview-pane" id="previewPane">
+        <div class="pv-head ui"><span>A4 미리보기</span><span id="pvInfo"></span></div>
+        <div id="pages"></div>
+      </div>
+    </div>
+
+    <div class="actionbar ui">
+      <span class="status" id="status"></span>
+      <button id="toPreview" class="only-mobile">미리보기</button>
+      <button id="newBtn">새로 작성</button>
+      <button id="saveBtn" class="primary">💾 저장</button>
+      <button id="printBtn">🖨 인쇄/PDF</button>
+    </div>
+  </section>
+
+  <!-- ============ 목록 ============ -->
+  <section id="tab-list" class="tab ui">
+    <div class="card">
+      <div class="row2">
+        <input id="search" type="search" placeholder="교육명 / 교육자 / 참석자 검색">
+        <input id="monthFilter" type="month">
+      </div>
+    </div>
+    <div id="logList"></div>
+    <div class="card">
+      <h3>백업 / 복원</h3>
+      <div class="rowx">
+        <button id="exportBtn">⬇ 전체 백업 (JSON)</button>
+        <label class="btn">⬆ 백업 복원<input type="file" id="importInput" accept=".json,application/json" hidden></label>
+      </div>
+      <p class="hint" id="storageInfo">데이터는 이 기기의 브라우저(IndexedDB)에만 저장됩니다. 브라우저 데이터 삭제 시 함께 지워지므로 주기적으로 백업하세요.</p>
+    </div>
+  </section>
+
+  <!-- ============ 설정 ============ -->
+  <section id="tab-setup" class="tab ui">
+    <div class="setup-grid">
+      <div>
+        <div class="card">
+          <h3>기본 설정</h3>
+          <label class="f">회사명 (일지 상단 표시)<input id="setCompany" placeholder="예) ㈜OO산업"></label>
+          <label class="f">결재란 (쉼표로 구분, 비우면 결재란 없음)<input id="setRoles" placeholder="작성,검토,승인"></label>
+          <button id="saveBasic" class="primary">설정 저장</button>
+        </div>
+        <div class="card">
+          <h3>부서 <small id="deptCnt"></small></h3>
+          <div class="row3" style="grid-template-columns:1fr auto">
+            <input id="newDept" placeholder="부서명 입력 후 추가">
+            <button id="addDept" class="primary">추가</button>
+          </div>
+          <div id="deptChips" class="chips"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>사용자 <small id="personCnt"></small></h3>
+        <div class="row3">
+          <select id="newPersonDept"></select>
+          <input id="newPersonName" placeholder="이름">
+          <button id="addPerson" class="primary">추가</button>
+        </div>
+        <details>
+          <summary>일괄 등록 (엑셀에서 복사·붙여넣기 가능)</summary>
+          <textarea id="bulk" rows="6" placeholder="부서,이름  (한 줄에 한 명, 쉼표 또는 탭 구분)&#10;생산1팀,홍길동&#10;품질팀,김철수" style="margin-top:6px"></textarea>
+          <button id="bulkAdd" style="margin-top:6px">일괄 추가</button>
+          <p class="hint">없는 부서는 자동으로 추가됩니다.</p>
+        </details>
+        <div id="peopleList"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="padDlg">
+  <div class="pad-wrap">
+    <div class="pad-title" id="padTitle">서명</div>
+    <div class="pad-sub" id="padSub">아래 칸에 서명해 주세요.</div>
+    <canvas id="padCv"></canvas>
+    <div class="pad-btns">
+      <button id="padClear" class="l">지우기</button>
+      <button id="padSkip">건너뛰기</button>
+      <button id="padCancel">닫기</button>
+      <button id="padOk" class="primary">서명 완료</button>
+    </div>
+  </div>
+</dialog>
+<dialog id="timeDlg">
+  <div class="pad-wrap">
+    <div class="pad-title" id="tmTitle">시간 선택</div>
+    <div class="tm-sel">
+      <select id="tmH"></select><span>시</span>
+      <select id="tmM"></select><span>분</span>
+    </div>
+    <div class="pad-btns">
+      <button id="tmClear" class="l">지우기</button>
+      <button id="tmCancel">취소</button>
+      <button id="tmOk" class="primary">확인</button>
+    </div>
+  </div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ---------------- utils ---------------- */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const WEEK = ['일','월','화','수','목','금','토'];
+function today(){ const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2000); }
+function debounce(fn, ms){ let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+/* ---------------- IndexedDB ---------------- */
+const DB = {
+  db: null,
+  open(){
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('training-log', 1);
+      r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('logs', {keyPath:'id'}); d.createObjectStore('kv', {keyPath:'key'}); };
+      r.onsuccess = () => { this.db = r.result; res(); };
+      r.onerror = () => rej(r.error);
+    });
+  },
+  tx(store, mode, fn){
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode); const req = fn(t.objectStore(store));
+      t.oncomplete = () => res(req && req.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    });
+  },
+  all(s){ return this.tx(s, 'readonly', st => st.getAll()); },
+  get(s, k){ return this.tx(s, 'readonly', st => st.get(k)); },
+  put(s, v){ return this.tx(s, 'readwrite', st => st.put(v)); },
+  del(s, k){ return this.tx(s, 'readwrite', st => st.delete(k)); },
+};
+const kvGet = async (k, def) => { const r = await DB.get('kv', k); return r ? r.value : def; };
+const kvSet = (k, v) => DB.put('kv', {key:k, value:v});
+
+/* ---------------- state ---------------- */
+let S = { company:'', roles:['작성','검토','승인'], depts:[], people:[] };
+let doc = null;
+let dirty = false;
+
+function newDoc(){
+  return { id:null, title:'', category:'정기교육', date:today(), start:'', end:'', place:'', instructor:'', content:'',
+    fillBlank:true, photos:[], attendees:[], approvals:S.roles.map(r => ({role:r, name:'', sign:''})), createdAt:null, updatedAt:null };
+}
+const saveSettings = () => kvSet('settings', S);
+const saveDraft = debounce(() => kvSet('draft', {doc, dirty}).catch(() => {}), 400);
+function touch(){ dirty = true; updateStatus(); schedulePreview(); saveDraft(); }
+function updateStatus(){
+  const el = $('#status');
+  el.textContent = dirty ? '● 저장 안 됨' : (doc.id ? '✓ 저장됨' : '새 일지');
+  el.classList.toggle('dirty', dirty);
+}
+
+/* ---------------- tabs ---------------- */
+$$('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+function showTab(name){
+  $$('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  $$('.tab').forEach(t => t.classList.toggle('on', t.id === 'tab-' + name));
+  if (name === 'list') renderList();
+  if (name === 'setup') renderSetup();
+  if (name === 'edit') { renderPick(); renderPreview(); autoGrow(); }
+  window.scrollTo(0, 0);
+}
+
+/* ---------------- form ---------------- */
+$$('[data-f]').forEach(el => el.addEventListener('input', () => {
+  doc[el.dataset.f] = el.type === 'checkbox' ? el.checked : el.value;
+  touch();
+}));
+function fillForm(){
+  $$('[data-f]').forEach(el => {
+    const v = doc[el.dataset.f];
+    if (el.type === 'checkbox') el.checked = !!v; else el.value = v ?? '';
+  });
+  autoGrow();
+}
+// 교육 내용 입력칸: 내용 길이에 맞춰 높이 자동 조정
+function autoGrow(){
+  const ta = $('#contentTa'); if (!ta || !ta.offsetParent) return;
+  ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight + 2) + 'px';
+}
+$('#contentTa').addEventListener('input', autoGrow);
+window.addEventListener('resize', debounce(autoGrow, 100));
+
+/* time picker */
+const pad2 = n => String(n).padStart(2, '0');
+const TM = { dlg:$('#timeDlg'), field:null };
+$('#tmH').innerHTML = Array.from({length:24}, (_, h) => `<option value="${pad2(h)}">${pad2(h)}</option>`).join('');
+function tmMinutes(cur){
+  const list = Array.from({length:12}, (_, k) => pad2(k * 5));
+  if (cur && !list.includes(cur)) { list.push(cur); list.sort(); }
+  $('#tmM').innerHTML = list.map(m => `<option value="${m}">${m}</option>`).join('');
+}
+$$('input.tm').forEach(el => el.addEventListener('click', () => {
+  const f = el.dataset.f; TM.field = el;
+  let v = doc[f];
+  if (!v){
+    if (f === 'end' && doc.start){ const [h, m] = doc.start.split(':').map(Number); v = `${pad2((h + 1) % 24)}:${pad2(m)}`; }
+    else v = f === 'end' ? '10:00' : '09:00';
+  }
+  const [h, m] = v.split(':');
+  tmMinutes(m); $('#tmH').value = h; $('#tmM').value = m;
+  $('#tmTitle').textContent = f === 'start' ? '시작 시간' : '종료 시간';
+  TM.dlg.showModal();
+}));
+function tmSet(v){ const el = TM.field; TM.dlg.close(); if (!el) return; el.value = v; el.dispatchEvent(new Event('input')); }
+$('#tmOk').onclick = () => tmSet(`${$('#tmH').value}:${$('#tmM').value}`);
+$('#tmClear').onclick = () => tmSet('');
+$('#tmCancel').onclick = () => TM.dlg.close();
+
+/* photos */
+const MAX_PHOTOS = 3;
+function compressImage(file){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file); const img = new Image();
+    img.onload = () => {
+      const max = 1600; const r = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res({src:c.toDataURL('image/jpeg', 0.82), r:Math.round(c.width / c.height * 10000) / 10000});
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('이미지를 읽을 수 없습니다')); };
+    img.src = url;
+  });
+}
+async function addPhotos(files){
+  const room = MAX_PHOTOS - doc.photos.length;
+  if (room <= 0) return toast(`사진은 최대 ${MAX_PHOTOS}장까지 등록할 수 있습니다`);
+  if (files.length > room) toast(`최대 ${MAX_PHOTOS}장까지만 등록됩니다 (${files.length - room}장 제외)`);
+  files = files.slice(0, room);
+  for (const f of files){
+    try { const {src, r} = await compressImage(f); doc.photos.push({id:uid(), src, r, caption:''}); }
+    catch(e){ toast(e.message); }
+  }
+  renderPhotos(); touch();
+}
+$('#photoInput').onchange = e => { addPhotos([...e.target.files]); e.target.value = ''; };
+$('#cameraInput').onchange = e => { addPhotos([...e.target.files]); e.target.value = ''; };
+function renderPhotos(){
+  $('#photoCnt').textContent = `${doc.photos.length} / ${MAX_PHOTOS}장`;
+  const full = doc.photos.length >= MAX_PHOTOS;
+  ['#photoInput', '#cameraInput'].forEach(s => { const inp = $(s); inp.disabled = full; inp.parentElement.classList.toggle('off', full); });
+  $('#photoList').innerHTML = doc.photos.map((p, i) => `
+    <div class="thumb" data-i="${i}">
+      <img src="${esc(p.src)}" alt="">
+      <div class="tb"><input data-cap="${i}" value="${esc(p.caption)}" placeholder="사진 이름 (예: 소화기 사용 실습)" title="사진 이름"></div>
+      <div class="tb">
+        <button data-mv="-1" ${i === 0 ? 'disabled' : ''}>◀</button>
+        <button data-mv="1" ${i === doc.photos.length - 1 ? 'disabled' : ''}>▶</button>
+        ${p.w || p.h ? '<button data-rs title="크기 초기화">↺</button>' : ''}
+        <button data-rm class="danger" style="margin-left:auto">삭제</button>
+      </div>
+    </div>`).join('');
+}
+$('#photoList').addEventListener('input', e => {
+  const i = e.target.dataset.cap; if (i == null) return;
+  doc.photos[i].caption = e.target.value; touch();
+});
+$('#photoList').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const i = +b.closest('.thumb').dataset.i;
+  if (b.hasAttribute('data-rm')) { if (!confirm('사진을 삭제할까요?')) return; doc.photos.splice(i, 1); }
+  else if (b.hasAttribute('data-rs')) { delete doc.photos[i].w; delete doc.photos[i].h; }
+  else { const j = i + (+b.dataset.mv); [doc.photos[i], doc.photos[j]] = [doc.photos[j], doc.photos[i]]; }
+  renderPhotos(); touch();
+});
+
+/* attendees */
+const sameP = (a, b) => a.dept === b.dept && a.name === b.name;
+function renderPick(){
+  const sel = $('#pickDept'); const cur = sel.value;
+  sel.innerHTML = `<option value="">전체 부서</option>` + S.depts.map(d => `<option>${esc(d)}</option>`).join('');
+  sel.value = S.depts.includes(cur) ? cur : '';
+  $('#deptList').innerHTML = S.depts.map(d => `<option>${esc(d)}</option>`).join('');
+  const dept = sel.value;
+  const list = S.people.filter(p => (!dept || p.dept === dept) && !doc.attendees.some(a => sameP(a, p)));
+  $('#pickList').innerHTML = list.length
+    ? list.map(p => `<label><input type="checkbox" value="${esc(p.id)}"> ${esc(p.name)}${dept ? '' : ` <small style="color:#888">${esc(p.dept)}</small>`}</label>`).join('')
+    : `<div class="empty">${S.people.length ? '추가할 인원이 없습니다.' : '등록된 사용자가 없습니다. [인원·설정] 탭에서 부서와 사용자를 등록하세요.'}</div>`;
+}
+$('#pickDept').onchange = renderPick;
+function addAttendees(people){
+  let n = 0;
+  for (const p of people){ if (!doc.attendees.some(a => sameP(a, p))) { doc.attendees.push({id:uid(), dept:p.dept, name:p.name, sign:''}); n++; } }
+  if (n){ renderAtt(); renderPick(); touch(); toast(`${n}명 추가됨`); }
+  return n;
+}
+$('#addPicked').onclick = () => {
+  const ids = $$('#pickList input:checked').map(i => i.value);
+  if (!ids.length) return toast('추가할 인원을 선택하세요');
+  addAttendees(S.people.filter(p => ids.includes(p.id)));
+};
+$('#addDeptAll').onclick = () => {
+  const dept = $('#pickDept').value;
+  const list = S.people.filter(p => !dept || p.dept === dept);
+  if (!list.length) return toast('추가할 인원이 없습니다');
+  if (!addAttendees(list)) toast('이미 모두 추가되었습니다');
+};
+$('#manAdd').onclick = () => {
+  const dept = $('#manDept').value.trim(), name = $('#manName').value.trim();
+  if (!name) return toast('이름을 입력하세요');
+  if (!addAttendees([{dept, name}])) return toast('이미 추가된 인원입니다');
+  $('#manName').value = ''; $('#manName').focus();
+};
+$('#manName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#manAdd').click(); });
+$('#sortAtt').onclick = () => {
+  const order = d => { const i = S.depts.indexOf(d); return i < 0 ? 9999 : i; };
+  doc.attendees.sort((a, b) => order(a.dept) - order(b.dept) || a.dept.localeCompare(b.dept, 'ko') || a.name.localeCompare(b.name, 'ko'));
+  renderAtt(); touch();
+};
+$('#clearAtt').onclick = () => {
+  if (!doc.attendees.length || !confirm('참석자를 모두 삭제할까요? (서명 포함)')) return;
+  doc.attendees = []; renderAtt(); renderPick(); touch();
+};
+function renderAtt(){
+  const n = doc.attendees.length, s = doc.attendees.filter(a => a.sign).length;
+  $('#attCnt').textContent = n ? `${n}명 · 서명 ${s}명` : '';
+  $('#attList').innerHTML = doc.attendees.map((a, i) => `
+    <div class="att" data-i="${i}">
+      <span class="no">${i + 1}</span>
+      <div class="who"><span>${esc(a.dept)}</span><b>${esc(a.name)}</b></div>
+      <button class="sigbox ${a.sign ? 'done' : ''}" data-sign>${a.sign ? `<img src="${esc(a.sign)}" alt="서명">` : '서명하기'}</button>
+      <button class="sm danger" data-rm title="삭제">✕</button>
+    </div>`).join('');
+}
+$('#attList').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const i = +b.closest('.att').dataset.i; const a = doc.attendees[i];
+  if (b.hasAttribute('data-rm')){
+    if (a.sign && !confirm(`${a.name} 님은 서명이 있습니다. 삭제할까요?`)) return;
+    doc.attendees.splice(i, 1); renderAtt(); renderPick(); touch();
+  } else if (b.hasAttribute('data-sign')){
+    Pad.open({ title:`${a.dept} ${a.name}`, sub:'교육 참석 확인 서명', hasSign:!!a.sign,
+      onOk: sig => { a.sign = sig; renderAtt(); touch(); } });
+  }
+});
+function signNext(skipped = new Set()){
+  const rest = doc.attendees.filter(a => !a.sign && !skipped.has(a.id));
+  if (!rest.length){ toast(doc.attendees.some(a => !a.sign) ? '건너뛴 인원을 제외하고 서명 완료' : '모든 참석자 서명 완료'); return; }
+  const a = rest[0];
+  Pad.open({ title:`${a.dept} ${a.name}`, sub:`교육 참석 확인 서명 · 남은 인원 ${rest.length}명`, skip:true,
+    onOk: sig => { a.sign = sig; renderAtt(); touch(); setTimeout(() => signNext(skipped), 200); },
+    onSkip: () => { skipped.add(a.id); setTimeout(() => signNext(skipped), 150); } });
+}
+$('#signNext').onclick = () => {
+  if (!doc.attendees.length) return toast('먼저 참석자를 추가하세요');
+  signNext();
+};
+
+/* approvals */
+function syncApprovals(){
+  const old = doc.approvals || [];
+  doc.approvals = S.roles.map(r => old.find(a => a.role === r) || {role:r, name:'', sign:''});
+}
+function renderAppr(){
+  $('#apprList').innerHTML = doc.approvals.length ? doc.approvals.map((a, i) => `
+    <div class="appr-row" data-i="${i}">
+      <b>${esc(a.role)}</b>
+      <input data-an="${i}" value="${esc(a.name)}" placeholder="성명">
+      <button class="sigbox ${a.sign ? 'done' : ''}" data-sign>${a.sign ? `<img src="${esc(a.sign)}" alt="서명">` : '서명하기'}</button>
+      <button class="sm" data-clr ${a.sign ? '' : 'disabled'}>지움</button>
+    </div>`).join('') : '<p class="hint">결재란이 설정되어 있지 않습니다.</p>';
+}
+$('#apprList').addEventListener('input', e => {
+  const i = e.target.dataset.an; if (i == null) return;
+  doc.approvals[i].name = e.target.value; touch();
+});
+$('#apprList').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const a = doc.approvals[+b.closest('.appr-row').dataset.i];
+  if (b.hasAttribute('data-clr')){ a.sign = ''; renderAppr(); touch(); }
+  else if (b.hasAttribute('data-sign')){
+    Pad.open({ title:`결재 - ${a.role}${a.name ? ' (' + a.name + ')' : ''}`, sub:'결재 서명', hasSign:!!a.sign,
+      onOk: sig => { a.sign = sig; renderAppr(); touch(); } });
+  }
+});
+
+/* ---------------- signature pad ---------------- */
+const Pad = {
+  dlg: $('#padDlg'), cv: $('#padCv'), opts: null, empty: true, drawing: false, last: null,
+  open(opts){
+    this.opts = opts;
+    $('#padTitle').textContent = opts.title; $('#padSub').textContent = opts.sub || '';
+    $('#padSkip').style.display = opts.skip ? '' : 'none';
+    $('#padOk').textContent = '서명 완료';
+    if (!this.dlg.open) this.dlg.showModal();
+    requestAnimationFrame(() => this.reset());
+  },
+  reset(){
+    const r = this.cv.getBoundingClientRect(), dpr = Math.max(1, window.devicePixelRatio || 1);
+    this.cv.width = Math.round(r.width * dpr); this.cv.height = Math.round(r.height * dpr);
+    const ctx = this.cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111'; ctx.lineWidth = 3.2;
+    this.ctx = ctx; this.empty = true;
+  },
+  pos(e){ const r = this.cv.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; },
+  trimmed(){
+    const {width:w, height:h} = this.cv; const d = this.cv.getContext('2d').getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 20){
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    if (x1 < 0) return null;
+    const pad = 10; x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+    const sw = x1 - x0 + 1, sh = y1 - y0 + 1, k = Math.min(1, 480 / sw, 200 / sh);
+    const o = document.createElement('canvas'); o.width = Math.max(1, Math.round(sw * k)); o.height = Math.max(1, Math.round(sh * k));
+    o.getContext('2d').drawImage(this.cv, x0, y0, sw, sh, 0, 0, o.width, o.height);
+    return o.toDataURL('image/png');
+  },
+  close(){ this.dlg.close(); },
+};
+Pad.cv.addEventListener('pointerdown', e => {
+  e.preventDefault(); Pad.cv.setPointerCapture(e.pointerId);
+  Pad.drawing = true; Pad.last = Pad.pos(e); Pad.mid = Pad.last;
+  const c = Pad.ctx; c.beginPath(); c.arc(Pad.last.x, Pad.last.y, 1.4, 0, Math.PI * 2); c.fillStyle = '#111'; c.fill();
+  Pad.empty = false;
+});
+Pad.cv.addEventListener('pointermove', e => {
+  if (!Pad.drawing) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  const c = Pad.ctx;
+  for (const ev of (evs.length ? evs : [e])){
+    const p = Pad.pos(ev); const m = {x:(Pad.last.x + p.x) / 2, y:(Pad.last.y + p.y) / 2};
+    c.beginPath(); c.moveTo(Pad.mid.x, Pad.mid.y); c.quadraticCurveTo(Pad.last.x, Pad.last.y, m.x, m.y); c.stroke();
+    Pad.last = p; Pad.mid = m;
+  }
+});
+['pointerup','pointercancel','pointerleave'].forEach(t => Pad.cv.addEventListener(t, () => { Pad.drawing = false; }));
+$('#padClear').onclick = () => Pad.reset();
+$('#padCancel').onclick = () => Pad.close();
+$('#padSkip').onclick = () => { const o = Pad.opts; Pad.close(); o.onSkip && o.onSkip(); };
+$('#padOk').onclick = () => {
+  const o = Pad.opts;
+  if (Pad.empty){
+    if (o.hasSign && confirm('기존 서명을 삭제할까요?')){ Pad.close(); o.onOk(''); return; }
+    return toast('서명을 입력하세요');
+  }
+  const sig = Pad.trimmed(); Pad.close();
+  if (sig) o.onOk(sig);
+};
+Pad.dlg.addEventListener('cancel', () => {});
+
+/* ---------------- A4 preview / pagination ---------------- */
+let pvTimer;
+function schedulePreview(){ clearTimeout(pvTimer); pvTimer = setTimeout(renderPreview, 150); }
+
+function fmtDate(){
+  if (!doc.date) return '';
+  const [y, m, d] = doc.date.split('-').map(Number); const wd = WEEK[new Date(y, m - 1, d).getDay()];
+  let s = `${y}년 ${m}월 ${d}일 (${wd})`;
+  if (doc.start || doc.end) s += ` ${doc.start || ''} ~ ${doc.end || ''}`;
+  if (doc.start && doc.end){
+    const [h1, m1] = doc.start.split(':').map(Number), [h2, m2] = doc.end.split(':').map(Number);
+    let mins = (h2 * 60 + m2) - (h1 * 60 + m1); if (mins < 0) mins += 1440;
+    if (mins > 0) s += ` (${Math.floor(mins / 60) ? Math.floor(mins / 60) + '시간' : ''}${mins % 60 ? ' ' + (mins % 60) + '분' : ''})`.replace('( ', '(');
+  }
+  return s;
+}
+function apprHTML(){
+  const ap = doc.approvals; if (!ap.length) return '';
+  return `<table class="p-appr"><tr><th class="v" rowspan="2">결<br>재</th>${ap.map(a => `<th>${esc(a.role)}</th>`).join('')}</tr>
+    <tr>${ap.map(a => `<td>${a.sign ? `<img src="${esc(a.sign)}" alt="">` : ''}<div class="nm">${esc(a.name)}</div></td>`).join('')}</tr></table>`;
+}
+const PH_W = [30, 186], PH_MAXH = 160;
+const PHOTO_DEF = {w:60.6};
+// 사진 칸 = 사진 원본 비율 그대로 (빈 여백 없음). 폭만 저장하고 높이는 비율로 자동 결정.
+function photosHTML(list, offset = 0, def = PHOTO_DEF, wrap = false){
+  return `<div class="p-photos${wrap ? ' wrap' : ''}">${list.map((p, i) => {
+    const w = p.w || def.w;
+    return `<figure style="width:${w}mm"><img src="${esc(p.src)}" alt="" style="aspect-ratio:${p.r || 4 / 3}"><figcaption contenteditable="true" spellcheck="false" data-capi="${offset + i}" data-ph="사진 이름 입력">${esc(p.caption)}</figcaption><span class="rz ui" data-rz="${offset + i}" title="드래그하여 크기 조정"></span></figure>`;
+  }).join('')}</div>`;
+}
+const ATT_HEAD = `<colgroup>${'<col class="c-no"><col class="c-dp"><col class="c-nm"><col>'.repeat(2)}</colgroup>
+  <thead><tr>${['No','부서','성명','서명'].map((t, i) => `<th${i === 0 ? '' : ''}>${t}</th>`).join('')}${['No','부서','성명','서명'].map((t, i) => `<th${i === 0 ? ' class="mid"' : ''}>${t}</th>`).join('')}</tr></thead>`;
+function cellHTML(i, mid, blankNo){
+  const m = mid ? ' mid' : '';
+  if (i < 0) return `<td class="no${m}">${blankNo || ''}</td><td></td><td></td><td class="sg"></td>`;
+  const a = doc.attendees[i];
+  return `<td class="no${m}">${i + 1}</td><td title="${esc(a.dept)}">${esc(a.dept)}</td><td>${esc(a.name)}</td><td class="sg">${a.sign ? `<img src="${esc(a.sign)}" alt="">` : ''}</td>`;
+}
+function rowEl(html){ const tr = document.createElement('tr'); tr.innerHTML = html; return tr; }
+
+function makeFrame(inner){
+  const frame = document.createElement('div'); frame.className = 'frame';
+  frame.innerHTML = `<div class="page"><div class="body">${inner}</div><div class="pfoot"></div></div>`;
+  $('#pages').appendChild(frame);
+  return {frame, body:frame.querySelector('.body')};
+}
+const over = body => body.scrollHeight > body.clientHeight + 1;
+
+function firstPageHTML(){
+  const n = doc.attendees.length, s = doc.attendees.filter(a => a.sign).length;
+  const ph = doc.photos.slice(0, MAX_PHOTOS);
+  return `
+    <div class="p-hd"><div class="p-ttl">${S.company ? `<div class="p-co">${esc(S.company)}</div>` : ''}<h1>교육일지</h1></div>${apprHTML()}</div>
+    <table class="p-info">
+      <colgroup><col style="width:24mm"><col><col style="width:24mm"><col></colgroup>
+      <tr><th>교 육 명</th><td colspan="3"><b>${esc(doc.title)}</b></td></tr>
+      <tr><th>교육구분</th><td>${esc(doc.category)}</td><th>교 육 자</th><td>${esc(doc.instructor)}</td></tr>
+      <tr><th>교육일시</th><td colspan="3">${esc(fmtDate())}</td></tr>
+      <tr><th>교육장소</th><td>${esc(doc.place)}</td><th>교육인원</th><td>총 ${n}명${n ? ` (서명 ${s}명)` : ''}</td></tr>
+    </table>
+    <div class="p-sec">교육 내용</div>
+    <div class="p-content">${esc((doc.content || '').replace(/\s+$/, ''))}</div>
+    ${ph.length ? `<div class="p-sec">교육 사진</div>${photosHTML(ph)}` : ''}
+    <div class="att-sec" style="display:flex;flex-direction:column;gap:2mm">
+      <div class="p-sec">교육 참석자 확인</div>
+      <table class="p-att">${ATT_HEAD}<tbody></tbody></table>
+    </div>`;
+}
+function contPageHTML(sec){
+  return `<div class="p-hd"><div class="p-ttl sm"><h1>교육일지 (계속)</h1></div><div style="font-size:9pt;padding-bottom:2mm">${esc(doc.title)} · ${esc(doc.date)}</div></div>${sec}`;
+}
+
+// 예전에 저장된 사진은 비율 정보가 없으므로 한 번 읽어서 채워 넣음
+function fillPhotoRatios(){
+  doc.photos.filter(p => !p.r && !p._rl).forEach(p => {
+    p._rl = true; const im = new Image();
+    im.onload = () => { delete p._rl; if (im.naturalHeight){ p.r = Math.round(im.naturalWidth / im.naturalHeight * 10000) / 10000; schedulePreview(); saveDraft(); } };
+    im.onerror = () => { delete p._rl; };
+    im.src = p.src;
+  });
+}
+function renderPreview(){
+  const host = $('#pages'); if (!host) return;
+  fillPhotoRatios();
+  host.innerHTML = '';
+  const N = doc.attendees.length;
+  const pairs = []; for (let i = 0; i < N; i += 2) pairs.push([i, i + 1 < N ? i + 1 : -1]);
+  const queue = pairs.slice();
+  let first = true, warn = '', guard = 0;
+
+  while (guard++ < 60){
+    const p = makeFrame(first ? firstPageHTML()
+      : contPageHTML(`<div class="att-sec" style="display:flex;flex-direction:column;gap:2mm"><div class="p-sec">교육 참석자 확인 (계속)</div><table class="p-att">${ATT_HEAD}<tbody></tbody></table></div>`));
+    const sec = p.body.querySelector('.att-sec'), tbody = sec.querySelector('tbody');
+    if (first && over(p.body)){
+      // 참석자 표 헤더조차 들어가지 않음 → 다음 페이지로
+      sec.remove();
+      if (over(p.body)) warn = '⚠ 내용이 길어 1페이지를 넘칩니다';
+      first = false; continue;
+    }
+    let added = 0;
+    while (queue.length){
+      const [a, b] = queue[0];
+      const tr = rowEl(cellHTML(a, false) + cellHTML(b, true, doc.fillBlank && b < 0 ? a + 2 : 0));
+      tbody.appendChild(tr);
+      if (over(p.body) && !(added === 0 && !first)){ tr.remove(); break; }
+      queue.shift(); added++;
+    }
+    if (queue.length && added === 0 && first){ sec.remove(); first = false; continue; }
+    if (!queue.length){
+      if (doc.fillBlank){
+        let no = pairs.length * 2;
+        for (let k = 0; k < 200; k++){
+          const tr = rowEl(cellHTML(-1, false, no + 1) + cellHTML(-1, true, no + 2));
+          tbody.appendChild(tr);
+          if (over(p.body)){ tr.remove(); break; }
+          no += 2;
+        }
+      }
+      if (!tbody.children.length && N === 0 && !doc.fillBlank) sec.remove();
+      break;
+    }
+    first = false;
+  }
+
+  // 추가 사진 별지
+  const extra = doc.photos.slice(MAX_PHOTOS);
+  for (let i = 0; i < extra.length; i += 6){
+    const list = extra.slice(i, i + 6);
+    makeFrame(contPageHTML(`<div class="p-sec">교육 사진 (계속)</div>${photosHTML(list, MAX_PHOTOS + i, {w:list.length <= 2 ? 92 : 60.6}, true)}`));
+  }
+
+  const frames = $$('#pages .frame');
+  frames.forEach((f, i) => f.querySelector('.pfoot').textContent = `- ${i + 1} / ${frames.length} -`);
+  $('#pvInfo').innerHTML = warn ? `<span class="pv-warn">${warn}</span>` : `A4 ${frames.length}페이지`;
+  fitPreview();
+}
+let MM210 = 0;
+function fitPreview(){
+  const host = $('#pages'); const w = host.clientWidth; if (!w) return;
+  if (!MM210){ const t = document.createElement('div'); t.style.cssText = 'position:absolute;visibility:hidden;width:210mm'; document.body.appendChild(t); MM210 = t.offsetWidth; t.remove(); }
+  host.style.setProperty('--s', Math.min(1.25, w / MM210).toFixed(4));
+}
+window.addEventListener('resize', debounce(fitPreview, 100));
+
+/* 미리보기에서 사진 모서리 드래그로 크기 조정 (마우스·터치 공용) */
+let RZ = null;
+const clamp = (v, [a, b]) => Math.min(b, Math.max(a, v));
+$('#pages').addEventListener('pointerdown', e => {
+  const hd = e.target.closest('[data-rz]'); if (!hd) return;
+  e.preventDefault();
+  const fig = hd.closest('figure'), img = fig.querySelector('img');
+  const s = parseFloat(getComputedStyle($('#pages')).getPropertyValue('--s')) || 1;
+  const pxmm = (MM210 || 794) / 210;
+  const row = fig.parentElement, others = [...row.children].filter(f => f !== fig);
+  const ratio = (img.naturalWidth && img.naturalHeight) ? img.naturalWidth / img.naturalHeight : (img.offsetWidth / img.offsetHeight || 1);
+  let maxW = row.classList.contains('wrap') ? PH_W[1]
+    : row.clientWidth / pxmm - others.reduce((t, f) => t + f.offsetWidth / pxmm, 0) - others.length * 2;
+  maxW = Math.max(PH_W[0], Math.min(maxW, PH_W[1], PH_MAXH * ratio));
+  RZ = {i:+hd.dataset.rz, fig, x:e.clientX, y:e.clientY, w:fig.offsetWidth / pxmm, k:1 / (s * pxmm), maxW, ratio};
+  RZ.nw = RZ.w;
+  fig.classList.add('rzing');
+  hd.setPointerCapture(e.pointerId);
+});
+$('#pages').addEventListener('pointermove', e => {
+  if (!RZ) return;
+  // 가로·세로 중 더 크게 움직인 쪽 기준으로 비율 유지하며 크기 변경
+  const dx = (e.clientX - RZ.x) * RZ.k, dy = (e.clientY - RZ.y) * RZ.k * RZ.ratio;
+  RZ.nw = clamp(RZ.w + (Math.abs(dx) >= Math.abs(dy) ? dx : dy), [PH_W[0], RZ.maxW]);
+  RZ.fig.style.width = RZ.nw + 'mm';
+});
+function rzEnd(){
+  if (!RZ) return;
+  const r = RZ; RZ = null; r.fig.classList.remove('rzing');
+  const p = doc.photos[r.i]; if (!p) return;
+  if (Math.abs(r.nw - r.w) < 0.3) return;
+  p.w = Math.round(r.nw * 10) / 10; delete p.h;
+  renderPhotos(); touch();
+}
+['pointerup', 'pointercancel'].forEach(t => $('#pages').addEventListener(t, rzEnd));
+
+/* 미리보기에서 사진 이름 바로 입력 */
+$('#pages').addEventListener('input', e => {
+  const c = e.target.closest('[data-capi]'); if (!c) return;
+  const i = +c.dataset.capi, p = doc.photos[i]; if (!p) return;
+  p.caption = c.textContent.replace(/\s+/g, ' ').trim();
+  const inp = $(`#photoList [data-cap="${i}"]`); if (inp) inp.value = p.caption;
+  dirty = true; updateStatus(); saveDraft();
+});
+$('#pages').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.closest('[data-capi]')){ e.preventDefault(); e.target.blur(); }
+});
+$('#pages').addEventListener('focusout', e => { if (e.target.closest('[data-capi]')) schedulePreview(); });
+
+/* ---------------- actions ---------------- */
+async function saveDoc(){
+  if (!doc.title.trim()){ toast('교육명을 입력하세요'); $('[data-f=title]').focus(); return false; }
+  const now = Date.now();
+  if (!doc.id){ doc.id = uid(); doc.createdAt = now; }
+  doc.updatedAt = now;
+  try { await DB.put('logs', clone(doc)); }
+  catch(e){ alert('저장 실패: ' + (e && e.message || e) + '\n저장 공간이 부족할 수 있습니다.'); return false; }
+  dirty = false; updateStatus(); saveDraft(); toast('저장되었습니다');
+  return true;
+}
+$('#saveBtn').onclick = saveDoc;
+$('#newBtn').onclick = () => {
+  if (dirty && !confirm('저장하지 않은 내용이 있습니다. 새로 작성할까요?')) return;
+  loadDoc(newDoc());
+};
+$('#printBtn').onclick = () => {
+  renderPreview();
+  const old = document.title;
+  document.title = `교육일지_${doc.date || ''}_${(doc.title || '').replace(/[\\/:*?"<>|]/g, '')}`;
+  setTimeout(() => { window.print(); document.title = old; }, 50);
+};
+$('#toPreview').onclick = () => $('#previewPane').scrollIntoView({behavior:'smooth'});
+window.addEventListener('beforeprint', () => { $('#pages').style.setProperty('--s', 1); });
+window.addEventListener('afterprint', fitPreview);
+window.addEventListener('beforeunload', e => { if (dirty){ e.preventDefault(); e.returnValue = ''; } });
+
+function loadDoc(d, isDirty = false){
+  doc = d; dirty = isDirty;
+  if (!doc.approvals) doc.approvals = [];
+  if (doc.fillBlank === undefined) doc.fillBlank = true;
+  fillForm(); renderPhotos(); renderAtt(); renderPick(); renderAppr(); updateStatus(); renderPreview(); saveDraft();
+}
+
+/* ---------------- list ---------------- */
+async function renderList(){
+  const q = $('#search').value.trim().toLowerCase(), mon = $('#monthFilter').value;
+  let logs = await DB.all('logs');
+  logs.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.updatedAt || 0) - (a.updatedAt || 0));
+  if (mon) logs = logs.filter(l => (l.date || '').startsWith(mon));
+  if (q) logs = logs.filter(l => [l.title, l.instructor, l.category, l.place, ...l.attendees.map(a => a.name + ' ' + a.dept)].join(' ').toLowerCase().includes(q));
+  $('#logList').innerHTML = logs.length ? logs.map(l => {
+    const n = l.attendees.length, s = l.attendees.filter(a => a.sign).length;
+    return `<div class="log" data-id="${esc(l.id)}">
+      <div class="d">${esc(l.date)}</div>
+      <div class="t"><b>${esc(l.title)}</b><span>${esc(l.category)}${l.instructor ? ' · 교육자 ' + esc(l.instructor) : ''} · 참석 ${n}명 (서명 ${s}) · 사진 ${l.photos.length}장</span></div>
+      <div class="acts"><button class="sm primary" data-act="open">열기</button><button class="sm" data-act="copy">복제</button><button class="sm danger" data-act="del">삭제</button></div>
+    </div>`;
+  }).join('') : `<div class="empty-box">${q || mon ? '검색 결과가 없습니다.' : '저장된 교육일지가 없습니다.'}</div>`;
+  if (navigator.storage && navigator.storage.estimate){
+    navigator.storage.estimate().then(e => {
+      $('#storageInfo').textContent = `데이터는 이 기기의 브라우저(IndexedDB)에만 저장됩니다. 사용량 ${(e.usage / 1048576).toFixed(1)}MB / 가능 ${(e.quota / 1048576 / 1024).toFixed(1)}GB. 주기적으로 백업하세요.`;
+    });
+  }
+}
+$('#search').addEventListener('input', debounce(renderList, 200));
+$('#monthFilter').addEventListener('change', renderList);
+$('#logList').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = b.closest('.log').dataset.id; const l = await DB.get('logs', id); if (!l) return;
+  if (b.dataset.act === 'del'){
+    if (!confirm(`"${l.title}" 교육일지를 삭제할까요?\n삭제 후 복구할 수 없습니다.`)) return;
+    await DB.del('logs', id);
+    if (doc.id === id){ doc.id = null; dirty = true; updateStatus(); }
+    renderList(); toast('삭제되었습니다'); return;
+  }
+  if (dirty && !confirm('작성 중인 내용이 저장되지 않았습니다. 계속할까요?')) return;
+  if (b.dataset.act === 'open') loadDoc(l);
+  else {
+    const c = clone(l);
+    Object.assign(c, {id:null, createdAt:null, updatedAt:null, date:today(), photos:[]});
+    c.attendees.forEach(a => { a.sign = ''; a.id = uid(); });
+    c.approvals.forEach(a => a.sign = '');
+    loadDoc(c, true); toast('복제됨 (사진·서명 제외)');
+  }
+  showTab('edit');
+});
+$('#exportBtn').onclick = async () => {
+  const data = {app:'training-log', version:1, exportedAt:new Date().toISOString(), settings:S, logs:await DB.all('logs')};
+  const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `교육일지_백업_${today().replace(/-/g, '')}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+$('#importInput').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (data.app !== 'training-log' || !Array.isArray(data.logs)) throw new Error('교육일지 백업 파일이 아닙니다');
+    if (!confirm(`일지 ${data.logs.length}건을 복원합니다.\n같은 일지는 백업 내용으로 덮어쓰고, 부서·사용자는 병합합니다. 진행할까요?`)) return;
+    for (const l of data.logs) if (l && l.id) await DB.put('logs', l);
+    const st = data.settings || {};
+    if (st.company && !S.company) S.company = st.company;
+    (st.depts || []).forEach(d => { if (!S.depts.includes(d)) S.depts.push(d); });
+    (st.people || []).forEach(p => { if (!S.people.some(x => sameP(x, p))) S.people.push({id:p.id || uid(), dept:p.dept, name:p.name}); });
+    await saveSettings(); renderList(); renderPick(); toast('복원 완료');
+  } catch(err){ alert('복원 실패: ' + err.message); }
+};
+
+/* ---------------- setup ---------------- */
+function renderSetup(){
+  $('#setCompany').value = S.company; $('#setRoles').value = S.roles.join(',');
+  $('#deptCnt').textContent = S.depts.length ? `${S.depts.length}개` : '';
+  $('#personCnt').textContent = S.people.length ? `${S.people.length}명` : '';
+  $('#deptChips').innerHTML = S.depts.length ? S.depts.map((d, i) =>
+    `<span class="chip">${esc(d)} <small style="color:#889">${S.people.filter(p => p.dept === d).length}</small><button data-i="${i}" title="삭제">×</button></span>`).join('')
+    : '<p class="hint">등록된 부서가 없습니다.</p>';
+  const sel = $('#newPersonDept'); const cur = sel.value;
+  sel.innerHTML = S.depts.length ? S.depts.map(d => `<option>${esc(d)}</option>`).join('') : '<option value="">부서를 먼저 추가하세요</option>';
+  if (S.depts.includes(cur)) sel.value = cur;
+  const groups = [...S.depts, ...new Set(S.people.map(p => p.dept).filter(d => !S.depts.includes(d)))];
+  $('#peopleList').innerHTML = groups.map(d => {
+    const ps = S.people.filter(p => p.dept === d); if (!ps.length) return '';
+    return `<div class="dept-group"><h4>${esc(d || '(부서 없음)')} · ${ps.length}명</h4><div class="chips" style="margin:0">${ps.map(p =>
+      `<span class="chip">${esc(p.name)}<button data-pid="${esc(p.id)}" title="삭제">×</button></span>`).join('')}</div></div>`;
+  }).join('') || '<p class="hint" style="margin-top:12px">등록된 사용자가 없습니다.</p>';
+}
+$('#saveBasic').onclick = async () => {
+  S.company = $('#setCompany').value.trim();
+  S.roles = $('#setRoles').value.split(',').map(s => s.trim()).filter(Boolean);
+  await saveSettings(); syncApprovals(); renderAppr(); touch(); toast('설정 저장됨');
+};
+function addDept(name){
+  name = name.trim(); if (!name) return false;
+  if (S.depts.includes(name)) return false;
+  S.depts.push(name); return true;
+}
+$('#addDept').onclick = async () => {
+  const v = $('#newDept').value;
+  if (!v.trim()) return toast('부서명을 입력하세요');
+  if (!addDept(v)) return toast('이미 있는 부서입니다');
+  $('#newDept').value = ''; await saveSettings(); renderSetup(); $('#newDept').focus();
+};
+$('#newDept').addEventListener('keydown', e => { if (e.key === 'Enter') $('#addDept').click(); });
+$('#deptChips').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-i]'); if (!b) return;
+  const d = S.depts[+b.dataset.i]; const n = S.people.filter(p => p.dept === d).length;
+  if (!confirm(n ? `"${d}" 부서와 소속 인원 ${n}명을 삭제할까요?\n(이미 작성된 일지에는 영향 없음)` : `"${d}" 부서를 삭제할까요?`)) return;
+  S.depts.splice(+b.dataset.i, 1); S.people = S.people.filter(p => p.dept !== d);
+  await saveSettings(); renderSetup();
+});
+$('#addPerson').onclick = async () => {
+  const dept = $('#newPersonDept').value, name = $('#newPersonName').value.trim();
+  if (!dept) return toast('부서를 먼저 추가하세요');
+  if (!name) return toast('이름을 입력하세요');
+  if (S.people.some(p => p.dept === dept && p.name === name)) return toast('이미 등록된 사용자입니다');
+  S.people.push({id:uid(), dept, name});
+  $('#newPersonName').value = ''; await saveSettings(); renderSetup(); $('#newPersonName').focus();
+};
+$('#newPersonName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#addPerson').click(); });
+$('#bulkAdd').onclick = async () => {
+  let n = 0;
+  for (const line of $('#bulk').value.split(/\r?\n/)){
+    const parts = line.split(/[,\t]/).map(s => s.trim());
+    if (parts.length < 2 || !parts[1]) continue;
+    const [dept, name] = parts;
+    if (dept) addDept(dept);
+    if (!S.people.some(p => p.dept === dept && p.name === name)){ S.people.push({id:uid(), dept, name}); n++; }
+  }
+  await saveSettings(); renderSetup(); $('#bulk').value = ''; toast(`${n}명 추가됨`);
+};
+$('#peopleList').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-pid]'); if (!b) return;
+  const p = S.people.find(x => x.id === b.dataset.pid); if (!p || !confirm(`${p.dept} ${p.name} 님을 삭제할까요?`)) return;
+  S.people = S.people.filter(x => x !== p); await saveSettings(); renderSetup();
+});
+
+/* ---------------- init ---------------- */
+(async () => {
+  try { await DB.open(); }
+  catch(e){ alert('저장소(IndexedDB)를 열 수 없습니다: ' + e.message); return; }
+  S = Object.assign(S, await kvGet('settings', {}));
+  const draft = await kvGet('draft', null);
+  doc = (draft && draft.doc) || newDoc();
+  if (!draft || !draft.doc) syncApprovals();
+  loadDoc(doc, !!(draft && draft.dirty));
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+})();
+
+if ('serviceWorker' in navigator && location.protocol !== 'file:'){
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW 등록 실패', err)));
+}
+</script>
+</body>
+</html>
