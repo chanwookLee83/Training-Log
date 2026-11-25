@@ -1,5 +1,5 @@
 /* 교육일지 PWA Service Worker */
-const CACHE = 'training-log-v8';
+const CACHE = 'training-log-v9';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
