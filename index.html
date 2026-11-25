@@ -173,12 +173,25 @@ dialog#timeDlg::backdrop,dialog#catDlg::backdrop{background:rgba(15,23,35,.6)}
 .p-info td{height:8.5mm;font-size:10pt;word-break:keep-all;overflow-wrap:anywhere}
 .p-sec{font-size:11pt;font-weight:700;border-left:1.3mm solid #000;padding-left:2mm;line-height:1.1;margin-top:1mm}
 .p-content{border:0.3mm solid #000;padding:3mm 3.5mm;min-height:12mm;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;line-height:1.6;font-size:10pt}
-.p-photos{display:flex;flex-wrap:nowrap;justify-content:flex-start;align-items:flex-start;gap:2mm}
+.p-photos{display:flex;flex-wrap:nowrap;justify-content:flex-start;align-items:flex-start;gap:2mm;position:relative}
 .p-photos.wrap{flex-wrap:wrap}
 .p-photos figure{margin:0;border:0.3mm solid #000;break-inside:avoid;position:relative;flex:0 1 auto;min-width:0;max-width:100%}
 .p-photos figure.rzing{outline:0.6mm dashed #1f6fd1;outline-offset:0.4mm}
-.p-photos .rz{position:absolute;right:0;bottom:0;width:calc(26px / var(--s));height:calc(26px / var(--s));cursor:nwse-resize;touch-action:none;
-  background:linear-gradient(135deg,transparent 50%,rgba(31,111,209,.85) 50%);z-index:2}
+.p-photos figure.rz-match{outline:0.6mm solid #e0245e;outline-offset:0.4mm}
+.p-photos .pbox{position:relative}
+/* 크기 조정 손잡이: ◢ 모서리 = 비율 유지, 오른쪽 막대 = 가로만, 아래 막대 = 세로만 */
+.p-photos .rz{position:absolute;z-index:2;touch-action:none}
+.p-photos .rz-c{right:0;bottom:0;width:calc(26px / var(--s));height:calc(26px / var(--s));cursor:nwse-resize;
+  background:linear-gradient(135deg,transparent 50%,rgba(31,111,209,.85) 50%)}
+.p-photos .rz-r{top:0;right:0;bottom:calc(30px / var(--s));width:calc(16px / var(--s));cursor:ew-resize}
+.p-photos .rz-b{left:0;bottom:0;right:calc(30px / var(--s));height:calc(16px / var(--s));cursor:ns-resize}
+.p-photos .rz-r::after,.p-photos .rz-b::after{content:"";position:absolute;background:rgba(31,111,209,.85);border-radius:99px;box-shadow:0 0 0 calc(1px / var(--s)) #fff}
+.p-photos .rz-r::after{right:calc(3px / var(--s));top:50%;width:calc(5px / var(--s));height:calc(34px / var(--s));transform:translateY(-50%)}
+.p-photos .rz-b::after{bottom:calc(3px / var(--s));left:50%;height:calc(5px / var(--s));width:calc(34px / var(--s));transform:translateX(-50%)}
+/* 크기 맞춤 가이드 선 */
+.p-photos .rz-guide{position:absolute;left:0;right:0;height:0;border-top:calc(1.5px / var(--s)) dashed #e0245e;z-index:3;pointer-events:none}
+.p-photos .rz-guide span{position:absolute;right:0;top:calc(2px / var(--s));background:#e0245e;color:#fff;font-size:calc(11px / var(--s));padding:calc(1px / var(--s)) calc(6px / var(--s));border-radius:calc(4px / var(--s));white-space:nowrap}
+.p-photos .rz-tip{position:absolute;left:0;top:calc(-20px / var(--s));background:#e0245e;color:#fff;font-size:calc(11px / var(--s));padding:calc(1px / var(--s)) calc(6px / var(--s));border-radius:calc(4px / var(--s));white-space:nowrap;z-index:3;pointer-events:none}
 .p-photos img{display:block;width:100%;height:auto;object-fit:cover}
 .p-photos figcaption{border-top:0.3mm solid #000;font-size:8.5pt;text-align:center;padding:0.8mm 1mm;min-height:5mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;outline:none;cursor:text}
 .p-photos figcaption:focus{background:#eef5ff;text-overflow:clip}
@@ -260,7 +273,7 @@ dialog#timeDlg::backdrop,dialog#catDlg::backdrop{background:rgba(15,23,35,.6)}
             <label class="btn">📷 촬영<input type="file" accept="image/*" capture="environment" id="cameraInput" hidden></label>
           </div>
           <div id="photoList" class="thumbs"></div>
-          <p class="hint">사진은 최대 3장까지 등록됩니다. 미리보기에서 사진 오른쪽 아래 모서리(◢)를 마우스나 손가락으로 드래그하면 크기를 조정할 수 있습니다.</p>
+          <p class="hint">사진은 최대 3장까지 등록됩니다. 미리보기에서 사진의 손잡이를 마우스나 손가락으로 드래그해 크기를 조정하세요. ◢ 모서리 = 비율 유지, 오른쪽 막대 = 가로만, 아래 막대 = 세로만. 다른 사진과 높이·폭이 비슷해지면 빨간 가이드 선이 나오며 크기가 딱 맞춰집니다.</p>
         </div>
 
         <div class="card">
@@ -851,13 +864,19 @@ function apprHTML(){
   return `<table class="p-appr"><tr><th class="v" rowspan="2">결<br>재</th>${ap.map(a => `<th>${esc(a.role)}</th>`).join('')}</tr>
     <tr>${ap.map(a => `<td>${a.sign ? `<img src="${esc(a.sign)}" alt="">` : ''}<div class="nm">${esc(a.name)}</div></td>`).join('')}</tr></table>`;
 }
-const PH_W = [30, 186], PH_MAXH = 160;
+const PH_W = [30, 186], PH_MAXH = 160, PH_H = [15, PH_MAXH];
 const PHOTO_DEF = {w:60.6};
 // 사진 칸 = 사진 원본 비율 그대로 (빈 여백 없음). 폭만 저장하고 높이는 비율로 자동 결정.
 function photosHTML(list, offset = 0, def = PHOTO_DEF, wrap = false){
   return `<div class="p-photos${wrap ? ' wrap' : ''}">${list.map((p, i) => {
-    const w = p.w || def.w;
-    return `<figure style="width:${w}mm"><img src="${esc(p.src)}" alt="" style="aspect-ratio:${p.r || 4 / 3}"><figcaption contenteditable="true" spellcheck="false" data-capi="${offset + i}" data-ph="사진 이름 입력">${esc(p.caption)}</figcaption><span class="rz ui" data-rz="${offset + i}" title="드래그하여 크기 조정"></span></figure>`;
+    const w = p.w || def.w, k = offset + i;
+    // h(사진 높이)가 있으면 자유 크기(가로·세로 따로), 없으면 원본 비율
+    const ist = p.h ? `height:${p.h}mm;object-fit:cover` : `aspect-ratio:${p.r || 4 / 3}`;
+    return `<figure style="width:${w}mm"><div class="pbox"><img src="${esc(p.src)}" alt="" style="${ist}">`
+      + `<span class="rz rz-r ui" data-rz="${k}" data-m="r" title="가로 크기 조정"></span>`
+      + `<span class="rz rz-b ui" data-rz="${k}" data-m="b" title="세로 크기 조정"></span>`
+      + `<span class="rz rz-c ui" data-rz="${k}" data-m="c" title="비율 유지하며 크기 조정"></span></div>`
+      + `<figcaption contenteditable="true" spellcheck="false" data-capi="${k}" data-ph="사진 이름 입력">${esc(p.caption)}</figcaption></figure>`;
   }).join('')}</div>`;
 }
 const ATT_COLS = ['No','부서','직위','성명','서명'];
@@ -997,32 +1016,60 @@ const clamp = (v, [a, b]) => Math.min(b, Math.max(a, v));
 $('#pages').addEventListener('pointerdown', e => {
   const hd = e.target.closest('[data-rz]'); if (!hd) return;
   e.preventDefault();
-  const fig = hd.closest('figure'), img = fig.querySelector('img');
+  const fig = hd.closest('figure'), img = fig.querySelector('img'), mode = hd.dataset.m || 'c';
   const s = parseFloat(getComputedStyle($('#pages')).getPropertyValue('--s')) || 1;
   const pxmm = (MM210 || 794) / 210;
-  const row = fig.parentElement, others = [...row.children].filter(f => f !== fig);
-  const ratio = (img.naturalWidth && img.naturalHeight) ? img.naturalWidth / img.naturalHeight : (img.offsetWidth / img.offsetHeight || 1);
+  const row = fig.parentElement, figs = [...row.querySelectorAll(':scope > figure')], others = figs.filter(f => f !== fig);
+  const w = fig.offsetWidth / pxmm, h = img.offsetHeight / pxmm, ratio = w / h || 1;
   let maxW = row.classList.contains('wrap') ? PH_W[1]
     : row.clientWidth / pxmm - others.reduce((t, f) => t + f.offsetWidth / pxmm, 0) - others.length * 2;
-  maxW = Math.max(PH_W[0], Math.min(maxW, PH_W[1], PH_MAXH * ratio));
-  RZ = {i:+hd.dataset.rz, fig, x:e.clientX, y:e.clientY, w:fig.offsetWidth / pxmm, k:1 / (s * pxmm), maxW, ratio};
-  RZ.nw = RZ.w;
+  maxW = Math.max(PH_W[0], Math.min(maxW, PH_W[1]));
+  if (mode === 'c') maxW = Math.max(PH_W[0], Math.min(maxW, PH_MAXH * ratio));
+  const rowTop = row.getBoundingClientRect().top;
+  // 다른 사진의 크기·아래쪽 위치 (가이드 선 기준)
+  const ref = others.map(f => { const im = f.querySelector('img');
+    return {fig:f, w:f.offsetWidth / pxmm, h:im.offsetHeight / pxmm, bottom:(im.getBoundingClientRect().bottom - rowTop) / s}; });
+  const guide = document.createElement('div'); guide.className = 'rz-guide ui'; guide.hidden = true; guide.innerHTML = '<span>높이 같음</span>';
+  const tip = document.createElement('div'); tip.className = 'rz-tip ui'; tip.hidden = true;
+  row.append(guide); fig.append(tip);
+  RZ = {i:+hd.dataset.rz, fig, img, mode, x:e.clientX, y:e.clientY, w, h, nw:w, nh:h, ratio, maxW, k:1 / (s * pxmm), ref, guide, tip,
+    imgTop:(img.getBoundingClientRect().top - rowTop) / s, pxmm};
   fig.classList.add('rzing');
   hd.setPointerCapture(e.pointerId);
 });
+const SNAP = 2.5;   // mm 이내로 가까워지면 다른 사진 크기에 맞춰 붙음
 $('#pages').addEventListener('pointermove', e => {
-  if (!RZ) return;
-  // 가로·세로 중 더 크게 움직인 쪽 기준으로 비율 유지하며 크기 변경
-  const dx = (e.clientX - RZ.x) * RZ.k, dy = (e.clientY - RZ.y) * RZ.k * RZ.ratio;
-  RZ.nw = clamp(RZ.w + (Math.abs(dx) >= Math.abs(dy) ? dx : dy), [PH_W[0], RZ.maxW]);
-  RZ.fig.style.width = RZ.nw + 'mm';
+  const r = RZ; if (!r) return;
+  const dx = (e.clientX - r.x) * r.k, dy = (e.clientY - r.y) * r.k;
+  let nw = r.w, nh = r.h;
+  if (r.mode === 'r') nw = clamp(r.w + dx, [PH_W[0], r.maxW]);
+  else if (r.mode === 'b') nh = clamp(r.h + dy, PH_H);
+  else { // 모서리: 가로·세로 중 더 크게 움직인 쪽 기준, 비율 유지
+    nw = clamp(r.w + (Math.abs(dx) >= Math.abs(dy * r.ratio) ? dx : dy * r.ratio), [PH_W[0], r.maxW]); nh = nw / r.ratio;
+  }
+  // 가이드: 높이 맞춤 / 폭 맞춤
+  let hRef = null, wRef = null;
+  if (r.mode !== 'r') for (const o of r.ref) if (Math.abs(nh - o.h) < SNAP){ nh = o.h; if (r.mode === 'c') nw = nh * r.ratio; hRef = o; break; }
+  if (r.mode !== 'b' && !(r.mode === 'c' && hRef)) for (const o of r.ref) if (Math.abs(nw - o.w) < SNAP){ nw = o.w; if (r.mode === 'c') nh = nw / r.ratio; wRef = o; break; }
+  if (!hRef) for (const o of r.ref) if (Math.abs(nh - o.h) < 0.3) hRef = o;
+  if (!wRef) for (const o of r.ref) if (Math.abs(nw - o.w) < 0.3) wRef = o;
+  r.nw = nw; r.nh = nh;
+  r.fig.style.width = nw + 'mm';
+  Object.assign(r.img.style, {height:nh + 'mm', aspectRatio:'auto', objectFit:'cover'});
+  r.guide.hidden = !hRef;
+  if (hRef) r.guide.style.top = (r.imgTop + nh * r.pxmm) + 'px';
+  r.ref.forEach(o => o.fig.classList.toggle('rz-match', o === wRef || o === hRef));
+  r.tip.hidden = false;
+  r.tip.textContent = `가로 ${nw.toFixed(0)} × 세로 ${nh.toFixed(0)}mm${wRef && hRef ? ' · 크기 같음' : wRef ? ' · 폭 같음' : hRef ? ' · 높이 같음' : ''}`;
 });
 function rzEnd(){
   if (!RZ) return;
-  const r = RZ; RZ = null; r.fig.classList.remove('rzing');
+  const r = RZ; RZ = null;
+  r.fig.classList.remove('rzing'); r.guide.remove(); r.tip.remove();
+  r.ref.forEach(o => o.fig.classList.remove('rz-match'));
   const p = doc.photos[r.i]; if (!p) return;
-  if (Math.abs(r.nw - r.w) < 0.3) return;
-  p.w = Math.round(r.nw * 10) / 10; delete p.h;
+  if (Math.abs(r.nw - r.w) < 0.3 && Math.abs(r.nh - r.h) < 0.3){ schedulePreview(); return; }
+  p.w = Math.round(r.nw * 10) / 10; p.h = Math.round(r.nh * 10) / 10;
   renderPhotos(); touch();
 }
 ['pointerup', 'pointercancel'].forEach(t => $('#pages').addEventListener(t, rzEnd));
