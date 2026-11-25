@@ -89,6 +89,10 @@ summary{cursor:pointer;color:var(--pri);font-size:14px;padding:4px 0}
 .sigbox img{max-width:100%;max-height:100%}
 .sigbox.done{border-style:solid;border-color:#9bd3b3;background:#f3fbf6}
 
+.ac-box{position:fixed;z-index:60;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.14);padding:4px;max-height:260px;overflow:auto}
+.ac-it{padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px}
+.ac-it:hover,.ac-it.on{background:#e8f0fa;color:var(--pri)}
+
 .ev-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .ev-row b{width:52px;font-size:14px}
 .seg{display:flex;gap:6px}
@@ -685,6 +689,7 @@ $('#manAdd').onclick = () => {
   const dept = $('#manDept').value.trim(), pos = $('#manPos').value.trim(), name = $('#manName').value.trim();
   if (!name) return toast('이름을 입력하세요');
   if (!addAttendees([{dept, pos, name}])) return toast('이미 추가된 인원입니다');
+  if (pos && !posList().includes(pos)){ rememberPos(pos); saveSettings(); }
   $('#manName').value = ''; $('#manName').focus();
 };
 $('#manName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#manAdd').click(); });
@@ -1199,7 +1204,7 @@ $('#addPerson').onclick = async () => {
   if (!dept) return toast('부서를 먼저 추가하세요');
   if (!name) return toast('이름을 입력하세요');
   if (S.people.some(p => p.dept === dept && p.name === name)) return toast('이미 등록된 사용자입니다');
-  S.people.push({id:uid(), dept, pos, name});
+  S.people.push({id:uid(), dept, pos, name}); rememberPos(pos);
   $('#newPersonName').value = ''; await saveSettings(); renderSetup(); $('#newPersonName').focus();
 };
 $('#newPersonName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#addPerson').click(); });
@@ -1213,6 +1218,7 @@ $('#bulkAdd').onclick = async () => {
     const ex = S.people.find(p => p.dept === dept && p.name === name);
     if (!ex){ S.people.push({id:uid(), dept, pos, name}); n++; }
     else if (pos && !ex.pos) ex.pos = pos;
+    rememberPos(pos);
   }
   await saveSettings(); renderSetup(); $('#bulk').value = ''; toast(`${n}명 추가됨`);
 };
@@ -1221,6 +1227,67 @@ $('#peopleList').addEventListener('click', async e => {
   const p = S.people.find(x => x.id === b.dataset.pid); if (!p || !confirm(`${p.dept} ${p.name} 님을 삭제할까요?`)) return;
   S.people = S.people.filter(x => x !== p); await saveSettings(); renderSetup();
 });
+
+/* ---------------- 자동완성 (한글 초성 검색 지원) ---------------- */
+const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+const choOf = ch => { const c = ch.charCodeAt(0) - 0xAC00; return c >= 0 && c < 11172 ? CHO[Math.floor(c / 588)] : ch; };
+const isJamo = ch => /[ㄱ-ㅎ]/.test(ch);
+// 예) "ㄷㄹ" → 대리, "과ㅈ" → 과장, "부" → 부장·부사장
+function koMatch(target, q){
+  q = q.replace(/\s+/g, ''); const t = target.replace(/\s+/g, '');
+  if (!q) return true;
+  for (let s = 0; s + q.length <= t.length; s++){
+    let ok = true;
+    for (let k = 0; k < q.length && ok; k++){
+      const qc = q[k], tc = t[s + k];
+      ok = isJamo(qc) ? choOf(tc) === qc : tc.toLowerCase() === qc.toLowerCase();
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+const AC = { box:null, input:null, items:[], idx:-1, getList:null };
+AC.box = document.createElement('div'); AC.box.className = 'ac-box ui'; AC.box.hidden = true; document.body.appendChild(AC.box);
+function acShow(){
+  const el = AC.input; if (!el) return;
+  const q = el.value.trim();
+  const qn = q.replace(/\s+/g, '').length, starts = v => koMatch(v.replace(/\s+/g, '').slice(0, qn), q) ? 0 : 1;
+  AC.items = AC.getList().filter(v => v !== q && koMatch(v, q)).sort((a, b) => starts(a) - starts(b)).slice(0, 8);
+  if (!AC.items.length){ acHide(); return; }
+  const r = el.getBoundingClientRect();
+  Object.assign(AC.box.style, {left:r.left + 'px', top:(r.bottom + 2) + 'px', width:Math.max(r.width, 120) + 'px'});
+  AC.box.innerHTML = AC.items.map((v, i) => `<div class="ac-it${i === AC.idx ? ' on' : ''}" data-i="${i}">${esc(v)}</div>`).join('');
+  AC.box.hidden = false;
+}
+function acHide(){ AC.box.hidden = true; AC.idx = -1; }
+function acPick(i){ const el = AC.input; if (!el || AC.items[i] == null) return; el.value = AC.items[i]; acHide(); el.dispatchEvent(new Event('input')); el.focus(); }
+AC.box.addEventListener('pointerdown', e => { const it = e.target.closest('.ac-it'); if (!it) return; e.preventDefault(); acPick(+it.dataset.i); });
+function attachAC(el, getList){
+  el.setAttribute('autocomplete', 'off');
+  const open = () => { AC.input = el; AC.getList = getList; AC.idx = -1; acShow(); };
+  el.addEventListener('focus', open);
+  el.addEventListener('input', () => { if (AC.input === el){ AC.idx = -1; acShow(); } });
+  el.addEventListener('blur', () => setTimeout(() => { if (AC.input === el) acHide(); }, 120));
+  el.addEventListener('keydown', e => {
+    if (AC.box.hidden || AC.input !== el || e.isComposing) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault(); const n = AC.items.length;
+      AC.idx = (AC.idx + (e.key === 'ArrowDown' ? 1 : -1) + n) % n; acShow();
+    } else if (e.key === 'Enter' && AC.idx >= 0){ e.preventDefault(); e.stopImmediatePropagation(); acPick(AC.idx); }
+    else if (e.key === 'Tab' && AC.items.length){ if (AC.idx < 0) AC.idx = 0; acPick(AC.idx); }
+    else if (e.key === 'Escape') acHide();
+  });
+}
+window.addEventListener('scroll', () => { if (!AC.box.hidden) acShow(); }, true);
+// 직위 목록: 한 번 입력한 직위 + 등록된 사용자들의 직위
+const posList = () => [...new Set([...(S.positions || []), ...S.people.map(p => p.pos)].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
+function rememberPos(pos){
+  pos = (pos || '').trim(); if (!pos) return;
+  S.positions = S.positions || [];
+  if (!S.positions.includes(pos)) S.positions.push(pos);
+}
+attachAC($('#newPersonPos'), posList);
+attachAC($('#manPos'), posList);
 
 /* ---------------- init ---------------- */
 (async () => {
