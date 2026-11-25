@@ -153,7 +153,11 @@ dialog#timeDlg::backdrop,dialog#catDlg::backdrop{background:rgba(15,23,35,.6)}
   -webkit-print-color-adjust:exact;print-color-adjust:exact}
 .page .body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:3mm}
 .page .body > *{flex-shrink:0}
-.page .pfoot{height:6mm;padding-top:2mm;text-align:center;font-size:8pt;color:#555}
+.page .pfoot{height:6mm;padding-top:2mm;font-size:8pt;color:#555;display:flex;align-items:flex-start;gap:3mm}
+.page .pfoot > span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.page .pfoot .pf-l{text-align:left;color:#000;font-size:9pt;font-weight:700}
+.page .pfoot .pf-c{text-align:center;flex:0 0 auto}
+.page .pfoot .pf-r{text-align:right;color:#000;font-size:9pt}
 .page table{width:100%;border-collapse:collapse;table-layout:fixed}
 .page th,.page td{border:0.3mm solid #000;padding:1mm 1.5mm;vertical-align:middle}
 .page th{background:#eceff3;font-weight:700;text-align:center}
@@ -360,7 +364,8 @@ dialog#timeDlg::backdrop,dialog#catDlg::backdrop{background:rgba(15,23,35,.6)}
       <div>
         <div class="card">
           <h3>기본 설정</h3>
-          <label class="f">회사명 (일지 상단 표시)<input id="setCompany" placeholder="예) ㈜OO산업"></label>
+          <label class="f">회사명 (일지 상단 · 좌측 하단 표시)<input id="setCompany" placeholder="예) ㈜OO산업"></label>
+          <label class="f">문서번호 (일지 우측 하단 표시)<input id="setDocNo" placeholder="예) F601-02 REV. A"></label>
           <label class="f">결재란 (쉼표로 구분, 비우면 결재란 없음)<input id="setRoles" placeholder="작성,검토,승인"></label>
           <button id="saveBasic" class="primary">설정 저장</button>
         </div>
@@ -481,7 +486,7 @@ const kvSet = (k, v) => DB.put('kv', {key:k, value:v});
 
 /* ---------------- state ---------------- */
 const DEFAULT_CATS = ['정기교육','신규채용자교육','작업내용변경교육','특별안전교육','품질교육','직무교육','OJT'];
-let S = { company:'', roles:['작성','검토','승인'], depts:[], people:[], cats:DEFAULT_CATS.slice() };
+let S = { company:'', docNo:'', roles:['작성','검토','승인'], depts:[], people:[], cats:DEFAULT_CATS.slice() };
 let doc = null;
 let dirty = false;
 
@@ -998,7 +1003,9 @@ function renderPreview(){
   }
 
   const frames = $$('#pages .frame');
-  frames.forEach((f, i) => f.querySelector('.pfoot').textContent = `- ${i + 1} / ${frames.length} -`);
+  // 하단: 좌측 회사명 · 가운데 쪽번호 · 우측 문서번호
+  frames.forEach((f, i) => f.querySelector('.pfoot').innerHTML =
+    `<span class="pf-l">${esc(S.company)}</span><span class="pf-c">- ${i + 1} / ${frames.length} -</span><span class="pf-r">${esc(S.docNo || '')}</span>`);
   $('#pvInfo').innerHTML = warn ? `<span class="pv-warn">${warn}</span>` : `A4 ${frames.length}페이지`;
   fitPreview();
 }
@@ -1180,6 +1187,7 @@ $('#importInput').onchange = async e => {
     for (const l of data.logs) if (l && l.id) await DB.put('logs', l);
     const st = data.settings || {};
     if (st.company && !S.company) S.company = st.company;
+    if (st.docNo && !S.docNo) S.docNo = st.docNo;
     (st.depts || []).forEach(d => { if (!S.depts.includes(d)) S.depts.push(d); });
     (st.cats || []).forEach(c => { if (!S.cats.includes(c)) S.cats.push(c); });
     (st.people || []).forEach(p => { if (!S.people.some(x => sameP(x, p))) S.people.push({id:p.id || uid(), dept:p.dept, pos:p.pos || '', name:p.name}); });
@@ -1189,7 +1197,7 @@ $('#importInput').onchange = async e => {
 
 /* ---------------- setup ---------------- */
 function renderSetup(){
-  $('#setCompany').value = S.company; $('#setRoles').value = S.roles.join(',');
+  $('#setCompany').value = S.company; $('#setDocNo').value = S.docNo || ''; $('#setRoles').value = S.roles.join(',');
   $('#catCnt').textContent = S.cats.length ? `${S.cats.length}개` : '';
   $('#catChips').innerHTML = S.cats.length ? S.cats.map((c, i) =>
     `<span class="chip">${esc(c)}<button data-ci="${i}" title="삭제">×</button></span>`).join('')
@@ -1211,6 +1219,7 @@ function renderSetup(){
 }
 $('#saveBasic').onclick = async () => {
   S.company = $('#setCompany').value.trim();
+  S.docNo = $('#setDocNo').value.trim();
   S.roles = $('#setRoles').value.split(',').map(s => s.trim()).filter(Boolean);
   await saveSettings(); syncApprovals(); renderAppr(); touch(); toast('설정 저장됨');
 };
