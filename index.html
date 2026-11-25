@@ -89,6 +89,12 @@ summary{cursor:pointer;color:var(--pri);font-size:14px;padding:4px 0}
 .sigbox img{max-width:100%;max-height:100%}
 .sigbox.done{border-style:solid;border-color:#9bd3b3;background:#f3fbf6}
 
+.ev-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ev-row b{width:52px;font-size:14px}
+.seg{display:flex;gap:6px}
+.seg button{min-width:56px}
+.seg button.on{background:var(--pri);border-color:var(--pri);color:#fff}
+
 .appr-row{display:grid;grid-template-columns:52px 1fr 96px auto;gap:8px;align-items:center;margin-bottom:6px}
 .appr-row b{font-size:14px}
 
@@ -176,9 +182,13 @@ dialog#timeDlg::backdrop,dialog#catDlg::backdrop{background:rgba(15,23,35,.6)}
 @media print{.p-photos figcaption:empty::before{content:none}}
 .p-att th{font-size:9pt;height:7mm;padding:0}
 .p-att td{height:10mm;font-size:9pt;padding:0 1mm;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.p-att .c-no{width:8mm}
-.p-att .c-dp{width:24mm}
-.p-att .c-nm{width:21mm}
+.p-att .c-no{width:7mm}
+.p-att .c-dp{width:20mm}
+.p-att .c-ps{width:13mm}
+.p-att .c-nm{width:18mm}
+.p-eval th,.p-eval td{height:6.5mm;font-size:9pt;padding:0 1mm;text-align:center}
+.p-eval td.ev-mk{font-size:12pt;font-weight:700}
+.p-eval td.ev-note{text-align:left;vertical-align:top;padding:1mm 1.5mm;word-break:keep-all;overflow-wrap:anywhere}
 .p-att td.no{font-size:8pt;color:#333}
 .p-att .mid{border-left-width:0.7mm}
 .p-att td.sg{padding:0.5mm}
@@ -250,6 +260,14 @@ dialog#timeDlg::backdrop,dialog#catDlg::backdrop{background:rgba(15,23,35,.6)}
         </div>
 
         <div class="card">
+          <h3>교육 평가</h3>
+          <div class="ev-row"><b>이해도</b><div class="seg" data-ev="evalU"></div></div>
+          <div class="ev-row"><b>집중도</b><div class="seg" data-ev="evalC"></div></div>
+          <label class="f" style="margin-top:6px">비고<input data-f="evalNote" placeholder="평가 관련 메모 (선택)"></label>
+          <label class="chk"><input type="checkbox" data-f="showEval"> 일지에 교육 평가란 표시</label>
+        </div>
+
+        <div class="card">
           <h3>참석자 <small id="attCnt"></small></h3>
           <div class="row2">
             <select id="pickDept"></select>
@@ -263,8 +281,9 @@ dialog#timeDlg::backdrop,dialog#catDlg::backdrop{background:rgba(15,23,35,.6)}
           </div>
           <details>
             <summary>명단에 없는 사람 직접 입력</summary>
-            <div class="row3" style="margin-top:6px">
+            <div class="row3" style="margin-top:6px;grid-template-columns:1fr 0.8fr 1fr auto">
               <input id="manDept" list="deptList" placeholder="부서">
+              <input id="manPos" placeholder="직위">
               <input id="manName" placeholder="이름">
               <button id="manAdd">추가</button>
             </div>
@@ -347,14 +366,15 @@ dialog#timeDlg::backdrop,dialog#catDlg::backdrop{background:rgba(15,23,35,.6)}
       </div>
       <div class="card">
         <h3>사용자 <small id="personCnt"></small></h3>
-        <div class="row3">
+        <div class="row3" style="grid-template-columns:1fr 0.8fr 1fr auto">
           <select id="newPersonDept"></select>
+          <input id="newPersonPos" placeholder="직위 (예: 사원)">
           <input id="newPersonName" placeholder="이름">
           <button id="addPerson" class="primary">추가</button>
         </div>
         <details>
           <summary>일괄 등록 (엑셀에서 복사·붙여넣기 가능)</summary>
-          <textarea id="bulk" rows="6" placeholder="부서,이름  (한 줄에 한 명, 쉼표 또는 탭 구분)&#10;생산1팀,홍길동&#10;품질팀,김철수" style="margin-top:6px"></textarea>
+          <textarea id="bulk" rows="6" placeholder="부서,이름,직위  (한 줄에 한 명, 쉼표 또는 탭 구분, 직위는 생략 가능)&#10;생산1팀,홍길동,사원&#10;품질팀,김철수,대리" style="margin-top:6px"></textarea>
           <button id="bulkAdd" style="margin-top:6px">일괄 추가</button>
           <p class="hint">없는 부서는 자동으로 추가됩니다.</p>
         </details>
@@ -449,7 +469,7 @@ let doc = null;
 let dirty = false;
 
 function newDoc(){
-  return { id:null, title:'', category:'정기교육', date:today(), start:'', end:'', place:'', instructor:'', dept:'', content:'',
+  return { id:null, title:'', category:'정기교육', date:today(), start:'', end:'', place:'', instructor:'', dept:'', content:'', evalU:'', evalC:'', evalNote:'', showEval:true,
     fillBlank:true, photos:[], attendees:[], approvals:S.roles.map(r => ({role:r, name:'', sign:''})), createdAt:null, updatedAt:null };
 }
 const saveSettings = () => kvSet('settings', S);
@@ -514,8 +534,23 @@ function renderDeptSel(){
   sel.value = cur;
 }
 
+/* 교육 평가 (상/중/하 버튼, 다시 누르면 해제) */
+function renderEval(){
+  $$('.seg[data-ev]').forEach(seg => {
+    const f = seg.dataset.ev;
+    seg.innerHTML = ['상','중','하'].map(l => `<button type="button" data-lv="${l}" class="${doc[f] === l ? 'on' : ''}">${l}</button>`).join('');
+  });
+}
+$$('.seg[data-ev]').forEach(seg => seg.addEventListener('click', e => {
+  const b = e.target.closest('button[data-lv]'); if (!b) return;
+  const f = seg.dataset.ev;
+  doc[f] = doc[f] === b.dataset.lv ? '' : b.dataset.lv;
+  renderEval(); touch();
+}));
+
 function fillForm(){
-  renderCats(); renderDeptSel();
+  if (doc.showEval === undefined) doc.showEval = true;
+  renderCats(); renderDeptSel(); renderEval();
   $$('[data-f]').forEach(el => {
     const v = doc[el.dataset.f];
     if (el.type === 'checkbox') el.checked = !!v; else el.value = v ?? '';
@@ -615,6 +650,8 @@ $('#photoList').addEventListener('click', e => {
 
 /* attendees */
 const sameP = (a, b) => a.dept === b.dept && a.name === b.name;
+// 직위: 참석자에 저장된 값, 없으면(예전 일지) 등록된 사용자 정보에서 찾음
+const attPos = a => a.pos || (S.people.find(p => sameP(p, a)) || {}).pos || '';
 function renderPick(){
   const sel = $('#pickDept'); const cur = sel.value;
   sel.innerHTML = `<option value="">전체 부서</option>` + S.depts.map(d => `<option>${esc(d)}</option>`).join('');
@@ -629,7 +666,7 @@ function renderPick(){
 $('#pickDept').onchange = renderPick;
 function addAttendees(people){
   let n = 0;
-  for (const p of people){ if (!doc.attendees.some(a => sameP(a, p))) { doc.attendees.push({id:uid(), dept:p.dept, name:p.name, sign:''}); n++; } }
+  for (const p of people){ if (!doc.attendees.some(a => sameP(a, p))) { doc.attendees.push({id:uid(), dept:p.dept, pos:p.pos || '', name:p.name, sign:''}); n++; } }
   if (n){ renderAtt(); renderPick(); touch(); toast(`${n}명 추가됨`); }
   return n;
 }
@@ -645,9 +682,9 @@ $('#addDeptAll').onclick = () => {
   if (!addAttendees(list)) toast('이미 모두 추가되었습니다');
 };
 $('#manAdd').onclick = () => {
-  const dept = $('#manDept').value.trim(), name = $('#manName').value.trim();
+  const dept = $('#manDept').value.trim(), pos = $('#manPos').value.trim(), name = $('#manName').value.trim();
   if (!name) return toast('이름을 입력하세요');
-  if (!addAttendees([{dept, name}])) return toast('이미 추가된 인원입니다');
+  if (!addAttendees([{dept, pos, name}])) return toast('이미 추가된 인원입니다');
   $('#manName').value = ''; $('#manName').focus();
 };
 $('#manName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#manAdd').click(); });
@@ -666,7 +703,7 @@ function renderAtt(){
   $('#attList').innerHTML = doc.attendees.map((a, i) => `
     <div class="att" data-i="${i}">
       <span class="no">${i + 1}</span>
-      <div class="who"><span>${esc(a.dept)}</span><b>${esc(a.name)}</b></div>
+      <div class="who"><span>${esc(a.dept)}</span>${attPos(a) ? `<span>${esc(attPos(a))}</span>` : ''}<b>${esc(a.name)}</b></div>
       <button class="sigbox ${a.sign ? 'done' : ''}" data-sign>${a.sign ? `<img src="${esc(a.sign)}" alt="서명">` : '서명하기'}</button>
       <button class="sm danger" data-rm title="삭제">✕</button>
     </div>`).join('');
@@ -818,13 +855,27 @@ function photosHTML(list, offset = 0, def = PHOTO_DEF, wrap = false){
     return `<figure style="width:${w}mm"><img src="${esc(p.src)}" alt="" style="aspect-ratio:${p.r || 4 / 3}"><figcaption contenteditable="true" spellcheck="false" data-capi="${offset + i}" data-ph="사진 이름 입력">${esc(p.caption)}</figcaption><span class="rz ui" data-rz="${offset + i}" title="드래그하여 크기 조정"></span></figure>`;
   }).join('')}</div>`;
 }
-const ATT_HEAD = `<colgroup>${'<col class="c-no"><col class="c-dp"><col class="c-nm"><col>'.repeat(2)}</colgroup>
-  <thead><tr>${['No','부서','성명','서명'].map((t, i) => `<th${i === 0 ? '' : ''}>${t}</th>`).join('')}${['No','부서','성명','서명'].map((t, i) => `<th${i === 0 ? ' class="mid"' : ''}>${t}</th>`).join('')}</tr></thead>`;
+const ATT_COLS = ['No','부서','직위','성명','서명'];
+const ATT_HEAD = `<colgroup>${'<col class="c-no"><col class="c-dp"><col class="c-ps"><col class="c-nm"><col>'.repeat(2)}</colgroup>
+  <thead><tr>${ATT_COLS.map(t => `<th>${t}</th>`).join('')}${ATT_COLS.map((t, i) => `<th${i === 0 ? ' class="mid"' : ''}>${t}</th>`).join('')}</tr></thead>`;
 function cellHTML(i, mid, blankNo){
   const m = mid ? ' mid' : '';
-  if (i < 0) return `<td class="no${m}">${blankNo || ''}</td><td></td><td></td><td class="sg"></td>`;
-  const a = doc.attendees[i];
-  return `<td class="no${m}">${i + 1}</td><td title="${esc(a.dept)}">${esc(a.dept)}</td><td>${esc(a.name)}</td><td class="sg">${a.sign ? `<img src="${esc(a.sign)}" alt="">` : ''}</td>`;
+  if (i < 0) return `<td class="no${m}">${blankNo || ''}</td><td></td><td></td><td></td><td class="sg"></td>`;
+  const a = doc.attendees[i], pos = attPos(a);
+  return `<td class="no${m}">${i + 1}</td><td title="${esc(a.dept)}">${esc(a.dept)}</td><td title="${esc(pos)}">${esc(pos)}</td><td>${esc(a.name)}</td><td class="sg">${a.sign ? `<img src="${esc(a.sign)}" alt="">` : ''}</td>`;
+}
+/* 교육 평가표 (사진 아래) */
+const EV_LV = ['상','중','하'];
+function evalHTML(){
+  if (doc.showEval === false) return '';
+  const mk = (f, l) => `<td class="ev-mk">${doc[f] === l ? '○' : ''}</td>`;
+  return `<div class="p-sec">교육 평가</div>
+    <table class="p-eval">
+      <colgroup><col style="width:16mm"><col style="width:16mm"><col><col><col><col><col><col><col style="width:34mm"></colgroup>
+      <tr><th rowspan="3">교육<br>평가</th><th>항 목</th><th colspan="3">이 해 도</th><th colspan="3">집 중 도</th><th>비 고</th></tr>
+      <tr><th>배 점</th>${EV_LV.map(l => `<th>${l}</th>`).join('')}${EV_LV.map(l => `<th>${l}</th>`).join('')}<td rowspan="2" class="ev-note">${esc(doc.evalNote)}</td></tr>
+      <tr><th>평 가</th>${EV_LV.map(l => mk('evalU', l)).join('')}${EV_LV.map(l => mk('evalC', l)).join('')}</tr>
+    </table>`;
 }
 function rowEl(html){ const tr = document.createElement('tr'); tr.innerHTML = html; return tr; }
 
@@ -852,6 +903,7 @@ function firstPageHTML(){
     <div class="p-sec">교육 내용</div>
     <div class="p-content">${esc((doc.content || '').replace(/\s+$/, ''))}</div>
     ${ph.length ? `<div class="p-sec">교육 사진</div>${photosHTML(ph)}` : ''}
+    ${evalHTML()}
     <div class="att-sec" style="display:flex;flex-direction:column;gap:2mm">
       <div class="p-sec">교육 참석자 확인</div>
       <table class="p-att">${ATT_HEAD}<tbody></tbody></table>
@@ -1078,7 +1130,7 @@ $('#importInput').onchange = async e => {
     if (st.company && !S.company) S.company = st.company;
     (st.depts || []).forEach(d => { if (!S.depts.includes(d)) S.depts.push(d); });
     (st.cats || []).forEach(c => { if (!S.cats.includes(c)) S.cats.push(c); });
-    (st.people || []).forEach(p => { if (!S.people.some(x => sameP(x, p))) S.people.push({id:p.id || uid(), dept:p.dept, name:p.name}); });
+    (st.people || []).forEach(p => { if (!S.people.some(x => sameP(x, p))) S.people.push({id:p.id || uid(), dept:p.dept, pos:p.pos || '', name:p.name}); });
     await saveSettings(); renderList(); renderPick(); toast('복원 완료');
   } catch(err){ alert('복원 실패: ' + err.message); }
 };
@@ -1102,7 +1154,7 @@ function renderSetup(){
   $('#peopleList').innerHTML = groups.map(d => {
     const ps = S.people.filter(p => p.dept === d); if (!ps.length) return '';
     return `<div class="dept-group"><h4>${esc(d || '(부서 없음)')} · ${ps.length}명</h4><div class="chips" style="margin:0">${ps.map(p =>
-      `<span class="chip">${esc(p.name)}<button data-pid="${esc(p.id)}" title="삭제">×</button></span>`).join('')}</div></div>`;
+      `<span class="chip">${esc(p.name)}${p.pos ? ` <small style="color:#889">${esc(p.pos)}</small>` : ''}<button data-pid="${esc(p.id)}" title="삭제">×</button></span>`).join('')}</div></div>`;
   }).join('') || '<p class="hint" style="margin-top:12px">등록된 사용자가 없습니다.</p>';
 }
 $('#saveBasic').onclick = async () => {
@@ -1143,11 +1195,11 @@ $('#deptChips').addEventListener('click', async e => {
   await saveSettings(); renderSetup();
 });
 $('#addPerson').onclick = async () => {
-  const dept = $('#newPersonDept').value, name = $('#newPersonName').value.trim();
+  const dept = $('#newPersonDept').value, name = $('#newPersonName').value.trim(), pos = $('#newPersonPos').value.trim();
   if (!dept) return toast('부서를 먼저 추가하세요');
   if (!name) return toast('이름을 입력하세요');
   if (S.people.some(p => p.dept === dept && p.name === name)) return toast('이미 등록된 사용자입니다');
-  S.people.push({id:uid(), dept, name});
+  S.people.push({id:uid(), dept, pos, name});
   $('#newPersonName').value = ''; await saveSettings(); renderSetup(); $('#newPersonName').focus();
 };
 $('#newPersonName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#addPerson').click(); });
@@ -1156,9 +1208,11 @@ $('#bulkAdd').onclick = async () => {
   for (const line of $('#bulk').value.split(/\r?\n/)){
     const parts = line.split(/[,\t]/).map(s => s.trim());
     if (parts.length < 2 || !parts[1]) continue;
-    const [dept, name] = parts;
+    const [dept, name, pos = ''] = parts;
     if (dept) addDept(dept);
-    if (!S.people.some(p => p.dept === dept && p.name === name)){ S.people.push({id:uid(), dept, name}); n++; }
+    const ex = S.people.find(p => p.dept === dept && p.name === name);
+    if (!ex){ S.people.push({id:uid(), dept, pos, name}); n++; }
+    else if (pos && !ex.pos) ex.pos = pos;
   }
   await saveSettings(); renderSetup(); $('#bulk').value = ''; toast(`${n}명 추가됨`);
 };
